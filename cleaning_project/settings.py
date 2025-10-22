@@ -80,7 +80,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         # Use a fresh dev database to resolve initial custom user migration ordering
-        'NAME': BASE_DIR / 'db_dev.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
