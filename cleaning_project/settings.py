@@ -55,7 +55,7 @@ ROOT_URLCONF = 'cleaning_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [],  # Using app-level templates instead
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
