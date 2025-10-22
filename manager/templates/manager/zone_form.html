@@ -1,0 +1,70 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-map"></i> {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Zone Name -->
+                        <div class="mb-3">
+                            <label for="{{ form.zone_name.id_for_label }}" class="form-label">
+                                Zone Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.zone_name }}
+                            {% if form.zone_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.zone_name.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Enter a unique name for the zone (e.g., Main Campus, Medical Campus)</small>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                Description
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.description.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Optional description for the zone</small>
+                        </div>
+
+                        <!-- Non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> {{ action }}
+                            </button>
+                            <a href="{% if zone %}{% url 'manager:zone_detail' zone.id %}{% else %}{% url 'manager:zones_list' %}{% endif %}" 
+                               class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

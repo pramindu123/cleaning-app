@@ -1,0 +1,60 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}{% if form.instance.pk %}Edit Faculty{% else %}Create Faculty{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card shadow border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="bi bi-building"></i>
+                        {% if form.instance.pk %}
+                            Edit Faculty
+                        {% else %}
+                            Create New Faculty
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.faculty_name.id_for_label }}" class="form-label">
+                                Faculty Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.faculty_name }}
+                            {% if form.faculty_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.faculty_name.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Enter the faculty name (e.g., "Faculty of Science", "Faculty of Engineering")
+                            </small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-check-circle"></i>
+                                {% if form.instance.pk %}Update Faculty{% else %}Create Faculty{% endif %}
+                            </button>
+                            <a href="{% url 'manager:faculties_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

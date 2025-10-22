@@ -1,0 +1,84 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-grid-3x3"></i> {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Section Name -->
+                        <div class="mb-3">
+                            <label for="{{ form.section_name.id_for_label }}" class="form-label">
+                                Section Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.section_name }}
+                            {% if form.section_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.section_name.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Enter a unique name for the section (e.g., Science Building, Library Block)</small>
+                        </div>
+
+                        <!-- Zone -->
+                        <div class="mb-3">
+                            <label for="{{ form.zone.id_for_label }}" class="form-label">
+                                Zone <span class="text-danger">*</span>
+                            </label>
+                            {{ form.zone }}
+                            {% if form.zone.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.zone.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Select the zone this section belongs to</small>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                Description
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.description.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Optional description for the section</small>
+                        </div>
+
+                        <!-- Non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-save"></i> {{ action }}
+                            </button>
+                            <a href="{% if section %}{% url 'manager:section_detail' section.id %}{% else %}{% url 'manager:sections_list' %}{% endif %}" 
+                               class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

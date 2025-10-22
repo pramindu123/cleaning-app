@@ -1,0 +1,114 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}{{ section.section_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-layers"></i> {{ section.section_name }}
+        </h2>
+        <div>
+            <a href="{% url 'manager:section_update' section.id %}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            <a href="{% url 'manager:section_delete' section.id %}" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Delete
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Section Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Section Name:</dt>
+                        <dd class="col-sm-9">{{ section.section_name }}</dd>
+
+                        <dt class="col-sm-3">Zone:</dt>
+                        <dd class="col-sm-9">
+                            <a href="{% url 'manager:zone_detail' section.zone.id %}" class="text-decoration-none">
+                                {{ section.zone.zone_name }}
+                            </a>
+                        </dd>
+
+                        <dt class="col-sm-3">Description:</dt>
+                        <dd class="col-sm-9">{{ section.description|default:"No description provided" }}</dd>
+
+                        <dt class="col-sm-3">Created:</dt>
+                        <dd class="col-sm-9">{{ section.created_at|date:"F d, Y g:i A" }}</dd>
+
+                        <dt class="col-sm-3">Last Updated:</dt>
+                        <dd class="col-sm-9">{{ section.updated_at|date:"F d, Y g:i A" }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Units in this Section -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box"></i> Units ({{ section.get_units_count }})
+                    </h5>
+                    <a href="{% url 'manager:unit_create' %}" class="btn btn-sm btn-light">
+                        <i class="bi bi-plus-circle"></i> Add Unit
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if units %}
+                        <div class="list-group">
+                            {% for unit in units %}
+                                <a href="{% url 'manager:unit_detail' unit.id %}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ unit.unit_name }}</h6>
+                                            <small class="text-muted">
+                                                {% if unit.faculty %}Faculty: {{ unit.faculty.faculty_name }}{% endif %}
+                                                {% if unit.description %} - {{ unit.description|truncatewords:10 }}{% endif %}
+                                            </small>
+                                        </div>
+                                        <span class="badge {% if unit.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {% if unit.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No units in this section yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 p-3 border rounded">
+                        <h3 class="text-primary mb-0">{{ section.get_units_count }}</h3>
+                        <small class="text-muted">Total Units</small>
+                    </div>
+                    <div class="p-3 border rounded">
+                        <h3 class="text-success mb-0">{{ section.get_active_units_count }}</h3>
+                        <small class="text-muted">Active Units</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="{% url 'manager:sections_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Sections
+        </a>
+    </div>
+</div>
+{% endblock %}
