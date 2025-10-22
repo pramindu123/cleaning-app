@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - USJ Cleaning App{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>Welcome, {{ user.first_name }} {{ user.last_name }}! 👋</h2>
+                <p class="text-muted mb-0">@{{ user.username }}</p>
+            </div>
+            <div>
+                <a href="{% url 'logout' %}" class="btn btn-outline-danger">Logout</a>
+            </div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Account Information</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong>Full Name:</strong>
+                        <p class="mb-0">{{ user.first_name }} {{ user.last_name }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>Username:</strong>
+                        <p class="mb-0">{{ user.username }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>Email:</strong>
+                        <p class="mb-0">{{ user.email }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>Role:</strong>
+                        <p class="mb-0">
+                            <span class="role-badge role-{{ user.role|lower }}">
+                                {{ role }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Dashboard Features</h5>
+                {% if user.is_manager %}
+                <div class="alert alert-info">
+                    <strong>Manager Access:</strong> You have full access to manage cleaning schedules, view reports, and manage assistants.
+                </div>
+                <ul>
+                    <li>Create and manage cleaning tasks</li>
+                    <li>Assign tasks to assistants</li>
+                    <li>View performance reports</li>
+                    <li>Manage team members</li>
+                </ul>
+                {% elif user.is_assistant %}
+                <div class="alert alert-success">
+                    <strong>Assistant Access:</strong> You can view assigned tasks and update their status.
+                </div>
+                <ul>
+                    <li>View assigned cleaning tasks</li>
+                    <li>Update task status</li>
+                    <li>Submit completion reports</li>
+                    <li>View cleaning schedules</li>
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
