@@ -1,0 +1,69 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Delete Unit - {{ unit.unit_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-6 offset-lg-3">
+            <div class="card shadow border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Confirm Delete
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <strong>Warning!</strong> This action cannot be undone.
+                    </div>
+
+                    <p>Are you sure you want to delete this unit?</p>
+                    
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ unit.unit_name }}</h5>
+                            <ul class="list-unstyled mb-0">
+                                <li><strong>Zone:</strong> {{ unit.zone.zone_name }}</li>
+                                <li><strong>Section:</strong> 
+                                    {% if unit.section %}
+                                    {{ unit.section.section_name }}
+                                    {% else %}
+                                    <span class="text-muted">No section</span>
+                                    {% endif %}
+                                </li>
+                                <li><strong>Faculty:</strong> 
+                                    {% if unit.faculty %}
+                                    {{ unit.faculty.faculty_name }}
+                                    {% else %}
+                                    <span class="text-muted">No faculty</span>
+                                    {% endif %}
+                                </li>
+                                <li><strong>Status:</strong> 
+                                    {% if unit.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Yes, Delete Unit
+                            </button>
+                            <a href="{% url 'manager:unit_detail' unit.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

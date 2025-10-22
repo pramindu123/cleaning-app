@@ -57,7 +57,11 @@ def logout_view(request):
 
 @login_required
 def dashboard_view(request):
-    """Dashboard view for authenticated users"""
+    """Dashboard view for authenticated users - redirects based on role"""
+    # Redirect managers to their dedicated dashboard
+    if request.user.role == 'MANAGER':
+        return redirect('manager:dashboard')
+    
     context = {
         'user': request.user,
         'role': request.user.get_role_display(),
