@@ -8,10 +8,11 @@ class User(AbstractUser):
     ROLE_CHOICES = [
         ('MANAGER', 'Manager'),
         ('ASSISTANT', 'Assistant'),
+        ('DEAN_OFFICE', 'Dean Office'),
     ]
     
     role = models.CharField(
-        max_length=10,
+        max_length=15,
         choices=ROLE_CHOICES,
         default='ASSISTANT',
         help_text='User role in the system'
@@ -31,3 +32,7 @@ class User(AbstractUser):
     def is_assistant(self):
         """Check if user is an assistant"""
         return self.role == 'ASSISTANT'
+    
+    def is_dean_office(self):
+        """Check if user is from dean office"""
+        return self.role == 'DEAN_OFFICE'
