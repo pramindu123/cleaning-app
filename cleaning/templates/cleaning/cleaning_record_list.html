@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Cleaning Records{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Cleaning Records</h2>
+        <div>
+            {% if user.is_manager %}
+            <a href="{% url 'cleaning:activity_performance_report' %}" class="btn btn-info me-2">
+                <i class="bi bi-graph-up"></i> Performance Report
+            </a>
+            <a href="{% url 'cleaning:cleaning_record_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create New Record
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Filter Records</h5>
+            <form method="get" action="">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        {{ filter_form.status.label_tag }}
+                        {{ filter_form.status }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ filter_form.unit.label_tag }}
+                        {{ filter_form.unit }}
+                    </div>
+                    {% if user.is_manager %}
+                    <div class="col-md-3">
+                        {{ filter_form.assigned_to.label_tag }}
+                        {{ filter_form.assigned_to }}
+                    </div>
+                    {% endif %}
+                    <div class="col-md-2">
+                        {{ filter_form.date_from.label_tag }}
+                        {{ filter_form.date_from }}
+                    </div>
+                    <div class="col-md-2">
+                        {{ filter_form.date_to.label_tag }}
+                        {{ filter_form.date_to }}
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="{% url 'cleaning:cleaning_record_list' %}" class="btn btn-secondary">Clear Filters</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Records Table -->
+    {% if records %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Unit</th>
+                            <th>Activity</th>
+                            <th>Location</th>
+                            {% if user.is_manager %}
+                            <th>Assigned To</th>
+                            {% endif %}
+                            <th>Scheduled Date</th>
+                            
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td>{{ record.unit.unit_name }}</td>
+                            <td>{% if record.activity %}{{ record.activity.activity_name }}{% else %}-{% endif %}</td>
+                            <td>{{ record.unit.get_full_location }}</td>
+                            {% if user.is_manager %}
+                            <td>{{ record.assigned_to.get_full_name|default:record.assigned_to.username }}</td>
+                            {% endif %}
+                            <td>{{ record.scheduled_date }}</td>
+                            
+                            <td>
+                                {% if record.status == 'PENDING' %}
+                                <span class="badge bg-warning text-dark">{{ record.get_status_display }}</span>
+                                {% elif record.status == 'IN_PROGRESS' %}
+                                <span class="badge bg-info">{{ record.get_status_display }}</span>
+                                {% elif record.status == 'COMPLETED' %}
+                                <span class="badge bg-success">{{ record.get_status_display }}</span>
+                                {% elif record.status == 'VERIFIED' %}
+                                <span class="badge bg-primary">{{ record.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'cleaning:cleaning_record_detail' record.pk %}" class="btn btn-sm btn-info">View</a>
+                                {% if user.is_manager and record.can_be_edited %}
+                                <a href="{% url 'cleaning:cleaning_record_update' record.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                                {% endif %}
+                                {% if user.is_assistant and record.assigned_to == user and record.status in 'PENDING,IN_PROGRESS' %}
+                                <a href="{% url 'cleaning:cleaning_record_complete' record.pk %}" class="btn btn-sm btn-success">Complete</a>
+                                {% endif %}
+                                {% if user.is_manager and record.can_be_verified %}
+                                <a href="{% url 'cleaning:cleaning_record_verify' record.pk %}" class="btn btn-sm btn-primary">Verify</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <p class="mb-0">No cleaning records found. {% if user.is_manager %}Click "Create New Record" to add one.{% endif %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

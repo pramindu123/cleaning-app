@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Cleaning Record{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title mb-3">{{ action }} Cleaning Record</h3>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.unit.id_for_label }}" class="form-label">{{ form.unit.label }} *</label>
+                            {{ form.unit }}
+                            {% if form.unit.help_text %}
+                            <div class="form-text">{{ form.unit.help_text }}</div>
+                            {% endif %}
+                            {% if form.unit.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.unit.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.activity.id_for_label }}" class="form-label">{{ form.activity.label }}</label>
+                            {{ form.activity }}
+                            {% if form.activity.help_text %}
+                            <div class="form-text">{{ form.activity.help_text }}</div>
+                            {% endif %}
+                            {% if form.activity.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.activity.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.assigned_to.id_for_label }}" class="form-label">{{ form.assigned_to.label }} *</label>
+                            {{ form.assigned_to }}
+                            {% if form.assigned_to.help_text %}
+                            <div class="form-text">{{ form.assigned_to.help_text }}</div>
+                            {% endif %}
+                            {% if form.assigned_to.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.assigned_to.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.scheduled_date.id_for_label }}" class="form-label">{{ form.scheduled_date.label }} *</label>
+                                {{ form.scheduled_date }}
+                                {% if form.scheduled_date.help_text %}
+                                <div class="form-text">{{ form.scheduled_date.help_text }}</div>
+                                {% endif %}
+                                {% if form.scheduled_date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.scheduled_date.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }} *</label>
+                                {{ form.status }}
+                                {% if form.status.help_text %}
+                                <div class="form-text">{{ form.status.help_text }}</div>
+                                {% endif %}
+                                {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.status.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
+                            {{ form.notes }}
+                            {% if form.notes.help_text %}
+                            <div class="form-text">{{ form.notes.help_text }}</div>
+                            {% endif %}
+                            {% if form.notes.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.notes.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'cleaning:cleaning_record_list' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">{{ action }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const unitSelect = document.getElementById('id_unit');
+    const activitySelect = document.getElementById('id_activity');
+        const assignedSelect = document.getElementById('id_assigned_to');
+
+        // Inject calendar container below the form
+        const formCardBody = document.querySelector('.card-body');
+        const calWrapper = document.createElement('div');
+        calWrapper.className = 'card mt-4';
+        calWrapper.innerHTML = `
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Activity Calendar</span>
+                <small class="text-muted">Select an activity to view and mark completed days</small>
+            </div>
+            <div id="activity-calendar-container" class="card-body p-2"></div>
+        `;
+        formCardBody.parentElement.appendChild(calWrapper);
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const calContainer = document.getElementById('activity-calendar-container');
+        const monthInput = document.getElementById('id_scheduled_date');
+        function getMonthFromInput() {
+            if (!monthInput || !monthInput.value) {
+                const now = new Date();
+                return { y: now.getFullYear(), m: now.getMonth() + 1 };
+            }
+            // Value like 'YYYY-MM' from <input type="month">
+            const parts = monthInput.value.split('-');
+            if (parts.length >= 2) {
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                if (!Number.isNaN(y) && !Number.isNaN(m)) return { y, m };
+            }
+            const now = new Date();
+            return { y: now.getFullYear(), m: now.getMonth() + 1 };
+        }
+        let { y: calYear, m: calMonth } = getMonthFromInput();
+
+        function wireCalendarInteractions(activityId) {
+            if (!calContainer) return;
+            calContainer.addEventListener('click', function(ev) {
+                const btn = ev.target.closest('.js-complete-day');
+                if (btn && activityId) {
+                    const date = btn.getAttribute('data-date');
+                    const assignedId = assignedSelect ? assignedSelect.value : '';
+                    fetch(`/cleaning/api/activities/${activityId}/complete-day/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: new URLSearchParams({ date, assigned_to: assignedId })
+                    }).then(r => r.json()).then(data => {
+                        if (data.ok) {
+                            // Reload calendar to reflect change
+                            loadCalendar(activityId, calYear, calMonth);
+                        } else {
+                            console.error('Failed to mark complete:', data);
+                        }
+                    }).catch(err => console.error(err));
+                }
+
+                const navPrev = ev.target.closest('.js-cal-prev');
+                const navNext = ev.target.closest('.js-cal-next');
+                if ((navPrev || navNext) && activityId) {
+                    const d = new Date(calYear, calMonth - 1, 1);
+                    if (navPrev) {
+                        d.setMonth(d.getMonth() - 1);
+                    } else {
+                        d.setMonth(d.getMonth() + 1);
+                    }
+                    calYear = d.getFullYear();
+                    calMonth = d.getMonth() + 1;
+                    loadCalendar(activityId, calYear, calMonth);
+                }
+            });
+        }
+
+        function loadCalendar(activityId, year, month) {
+            if (!activityId) {
+                calContainer.innerHTML = '<div class="text-muted">Select an activity to view its calendar.</div>';
+                return;
+            }
+            // lock=1 hides nav so only the selected Scheduled Month is actionable
+            fetch(`/cleaning/activities/${activityId}/calendar/partial/?year=${year}&month=${month}&lock=1`)
+                .then(r => r.text())
+                .then(html => {
+                    calContainer.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error('Failed to load calendar partial', err);
+                    calContainer.innerHTML = '<div class="text-danger">Failed to load calendar.</div>';
+                });
+        }
+
+    if (unitSelect && activitySelect) {
+        unitSelect.addEventListener('change', function() {
+            const unitId = this.value;
+
+            if (!unitId) {
+                // Clear activities if no unit selected
+                activitySelect.innerHTML = '<option value="">-- No specific activity (General cleaning) --</option>';
+                return;
+            }
+
+            // Fetch activities for the selected unit
+            fetch(`/cleaning/api/activities/unit/${unitId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    // Clear existing options
+                    activitySelect.innerHTML = '<option value="">-- No specific activity (General cleaning) --</option>';
+
+                    // Add new options
+                    data.activities.forEach(activity => {
+                        const option = document.createElement('option');
+                        option.value = activity.id;
+                        option.textContent = `${activity.activity_name} (${activity.frequency})`;
+                        activitySelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching activities:', error);
+                });
+        });
+
+                activitySelect.addEventListener('change', function() {
+                    const activityId = this.value;
+                    ({ y: calYear, m: calMonth } = getMonthFromInput());
+                    loadCalendar(activityId, calYear, calMonth);
+                    // Wire interactions once on first render
+                    wireCalendarInteractions(activityId);
+                });
+
+                if (monthInput) {
+                    monthInput.addEventListener('change', function() {
+                        const activityId = activitySelect.value;
+                        if (!activityId) return;
+                        ({ y: calYear, m: calMonth } = getMonthFromInput());
+                        loadCalendar(activityId, calYear, calMonth);
+                    });
+                }
+
+                // If activity already has a value (edit form), load calendar initially
+                if (activitySelect.value) {
+                    ({ y: calYear, m: calMonth } = getMonthFromInput());
+                    loadCalendar(activitySelect.value, calYear, calMonth);
+                    wireCalendarInteractions(activitySelect.value);
+                } else {
+                    calContainer.innerHTML = '<div class="text-muted">Select an activity to view its calendar.</div>';
+                }
+    }
+});
+</script>
+{% endblock %}

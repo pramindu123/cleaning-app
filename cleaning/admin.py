@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Zone, Section, Faculty, Unit
+from .models import Zone, Section, Faculty, Unit, CleaningActivity, CleaningRecord
 
 
 @admin.register(Zone)
@@ -130,3 +130,122 @@ class UnitAdmin(admin.ModelAdmin):
         updated = queryset.update(is_active=False)
         self.message_user(request, f'{updated} unit(s) deactivated successfully.')
     deactivate_units.short_description = 'Deactivate selected units'
+
+
+@admin.register(CleaningActivity)
+class CleaningActivityAdmin(admin.ModelAdmin):
+    list_display = [
+        'activity_name',
+        'unit',
+        'frequency',
+        'budget_percentage',
+        'is_active',
+        'created_at'
+    ]
+    search_fields = [
+        'activity_name',
+        'description',
+        'unit__unit_name',
+        'special_instructions'
+    ]
+    list_filter = ['frequency', 'is_active', 'created_at', 'unit__zone']
+    list_select_related = ['unit']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('id', 'unit', 'activity_name', 'description')
+        }),
+        ('Schedule & Budget', {
+            'fields': ('frequency', 'budget_percentage')
+        }),
+        ('Status & Instructions', {
+            'fields': ('is_active', 'special_instructions')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['activate_activities', 'deactivate_activities']
+    
+    def activate_activities(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'{updated} activity(ies) activated successfully.')
+    activate_activities.short_description = 'Activate selected activities'
+    
+    def deactivate_activities(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} activity(ies) deactivated successfully.')
+    deactivate_activities.short_description = 'Deactivate selected activities'
+
+
+@admin.register(CleaningRecord)
+class CleaningRecordAdmin(admin.ModelAdmin):
+    list_display = [
+        'unit',
+        'activity',
+        'assigned_to', 
+        'status', 
+        'scheduled_date', 
+        
+        'completed_date',
+        'verified_by',
+        'created_at'
+    ]
+    search_fields = [
+        'unit__unit_name',
+        'activity__activity_name',
+        'assigned_to__username',
+        'assigned_to__first_name',
+        'assigned_to__last_name',
+        'notes',
+        'verification_notes'
+    ]
+    list_filter = ['status', 'scheduled_date', 'created_at', 'unit__zone', 'activity']
+    list_select_related = ['unit', 'activity', 'assigned_to', 'verified_by']
+    readonly_fields = ['id', 'created_at', 'updated_at', 'completed_date', 'verified_date']
+    date_hierarchy = 'scheduled_date'
+    
+    fieldsets = (
+        ('Assignment Information', {
+            'fields': ('id', 'unit', 'activity', 'assigned_to', 'status')
+        }),
+        ('Schedule', {
+            'fields': ('scheduled_date',)
+        }),
+        ('Completion Details', {
+            'fields': ('completed_date', 'notes'),
+            'classes': ('collapse',)
+        }),
+        ('Verification Details', {
+            'fields': ('verified_by', 'verified_date', 'verification_notes'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['mark_as_completed', 'mark_as_verified']
+    
+    def mark_as_completed(self, request, queryset):
+        from django.utils import timezone
+        queryset = queryset.filter(status__in=['PENDING', 'IN_PROGRESS'])
+        updated = queryset.update(status='COMPLETED', completed_date=timezone.now())
+        self.message_user(request, f'{updated} record(s) marked as completed.')
+    mark_as_completed.short_description = 'Mark selected records as completed'
+    
+    def mark_as_verified(self, request, queryset):
+        from django.utils import timezone
+        queryset = queryset.filter(status='COMPLETED')
+        updated = queryset.update(
+            status='VERIFIED',
+            verified_by=request.user,
+            verified_date=timezone.now()
+        )
+        self.message_user(request, f'{updated} record(s) marked as verified.')
+    mark_as_verified.short_description = 'Mark selected records as verified'
+

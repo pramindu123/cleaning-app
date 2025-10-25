@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Activities: {{ unit.get_full_location }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Manage Activities for {{ unit.get_full_location }}</h3>
+    <div>
+      <a href="{% url 'cleaning:cleaning_activity_list' %}?unit={{ unit.id }}" class="btn btn-outline-secondary">Back to Activities</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 20%">Activity Name</th>
+                <th style="width: 30%">Description</th>
+                <th style="width: 15%">Frequency</th>
+                <th style="width: 10%">Active</th>
+                <th style="width: 20%">Special Instructions</th>
+                <th style="width: 5%">Delete</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for form in formset.forms %}
+              <tr>
+                <td>
+                  {{ form.activity_name }}
+                  {% if form.activity_name.errors %}
+                  <div class="invalid-feedback d-block">{{ form.activity_name.errors }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  {{ form.description }}
+                  {% if form.description.errors %}
+                  <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  {{ form.frequency }}
+                  {% if form.frequency.errors %}
+                  <div class="invalid-feedback d-block">{{ form.frequency.errors }}</div>
+                  {% endif %}
+                </td>
+                <td class="text-center">{{ form.is_active }}</td>
+                <td>
+                  {{ form.special_instructions }}
+                  {% if form.special_instructions.errors %}
+                  <div class="invalid-feedback d-block">{{ form.special_instructions.errors }}</div>
+                  {% endif %}
+                </td>
+                <td class="text-center">{% if form.instance.pk %}{{ form.DELETE }}{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-between">
+          <div>
+            <a class="btn btn-outline-secondary" href="?extra={{ formset.total_form_count|add:'5' }}">Add 5 more rows</a>
+          </div>
+          <div>
+            <button type="submit" class="btn btn-primary">Save Activities</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

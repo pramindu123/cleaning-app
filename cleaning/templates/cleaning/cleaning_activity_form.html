@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Cleaning Activity{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ action }} Cleaning Activity</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.unit.id_for_label }}" class="form-label">{{ form.unit.label }} *</label>
+                            {{ form.unit }}
+                            {% if form.unit.help_text %}
+                            <div class="form-text">{{ form.unit.help_text }}</div>
+                            {% endif %}
+                            {% if form.unit.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.unit.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.activity_name.id_for_label }}" class="form-label">{{ form.activity_name.label }} *</label>
+                            {{ form.activity_name }}
+                            {% if form.activity_name.help_text %}
+                            <div class="form-text">{{ form.activity_name.help_text }}</div>
+                            {% endif %}
+                            {% if form.activity_name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.activity_name.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {% if form.description.help_text %}
+                            <div class="form-text">{{ form.description.help_text }}</div>
+                            {% endif %}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.description.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.frequency.id_for_label }}" class="form-label">{{ form.frequency.label }} *</label>
+                                {{ form.frequency }}
+                                {% if form.frequency.help_text %}
+                                <div class="form-text">{{ form.frequency.help_text }}</div>
+                                {% endif %}
+                                {% if form.frequency.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.frequency.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.budget_percentage.id_for_label }}" class="form-label">{{ form.budget_percentage.label }} *</label>
+                                {{ form.budget_percentage }}
+                                {% if form.budget_percentage.help_text %}
+                                <div class="form-text">{{ form.budget_percentage.help_text }}</div>
+                                {% endif %}
+                                {% if form.budget_percentage.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.budget_percentage.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.special_instructions.id_for_label }}" class="form-label">{{ form.special_instructions.label }}</label>
+                            {{ form.special_instructions }}
+                            {% if form.special_instructions.help_text %}
+                            <div class="form-text">{{ form.special_instructions.help_text }}</div>
+                            {% endif %}
+                            {% if form.special_instructions.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.special_instructions.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                {{ form.is_active.label }}
+                            </label>
+                            {% if form.is_active.help_text %}
+                            <div class="form-text">{{ form.is_active.help_text }}</div>
+                            {% endif %}
+                            {% if form.is_active.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.is_active.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'cleaning:cleaning_activity_list' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">{{ action }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
