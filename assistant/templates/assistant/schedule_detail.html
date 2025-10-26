@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Details - Assistant Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fc; }
+        .navbar { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); }
+        .card { border: none; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); }
+        .info-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .table th { border-top: none; background-color: #f8f9fc; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'assistant:dashboard' %}">
+                <i class="fas fa-calendar-check me-2"></i>Schedule Management
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{% url 'assistant:schedule_list' %}">
+                    <i class="fas fa-list me-1"></i>My Schedules
+                </a>
+                <a class="nav-link" href="{% url 'assistant:dashboard' %}">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-calendar-alt me-2 text-primary"></i>Schedule Details</h2>
+            <a href="{% url 'assistant:schedule_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-1"></i>Back to List
+            </a>
+        </div>
+
+        <!-- Schedule Info Card -->
+        <div class="card info-card text-white mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-2">
+                            <i class="fas fa-building me-2"></i>{{ schedule.unit.name }}
+                        </h4>
+                        <p class="mb-2">
+                            <i class="fas fa-calendar-alt me-2"></i>{{ schedule.month|date:"F Y" }}
+                        </p>
+                        <div class="text-light">
+                            <small>
+                                <i class="fas fa-plus-circle me-1"></i>Created: {{ schedule.created_date|date:"M d, Y" }}
+                                {% if schedule.submitted_date %}
+                                <br><i class="fas fa-paper-plane me-1"></i>Submitted: {{ schedule.submitted_date|date:"M d, Y" }}
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="mb-3">
+                            <span class="badge fs-6 {% if schedule.status == 'draft' %}bg-light text-dark
+                                             {% elif schedule.status == 'submitted' %}bg-warning text-dark
+                                             {% elif schedule.status == 'approved' %}bg-success
+                                             {% else %}bg-info{% endif %}">
+                                <i class="fas {% if schedule.status == 'draft' %}fa-edit
+                                           {% elif schedule.status == 'submitted' %}fa-clock
+                                           {% elif schedule.status == 'approved' %}fa-check-circle
+                                           {% else %}fa-exclamation-triangle{% endif %} me-1"></i>
+                                {{ schedule.get_status_display }}
+                            </span>
+                        </div>
+                        {% if schedule.can_edit %}
+                        <div class="d-grid gap-2">
+                            {% if not schedule.entries.exists %}
+                            <button class="btn btn-light" disabled>
+                                <i class="fas fa-paper-plane me-1"></i>Submit for Review
+                            </button>
+                            <small class="text-light">Add entries first</small>
+                            {% else %}
+                            <form action="{% url 'assistant:submit_schedule' schedule.pk %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning"
+                                        onclick="return confirm('Are you sure you want to submit this schedule for review?')">
+                                    <i class="fas fa-paper-plane me-1"></i>Submit for Review
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Entries -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-ul me-2"></i>Schedule Entries
+                    </h5>
+                    {% if schedule.can_edit %}
+                    <button class="btn btn-light btn-sm" disabled>
+                        <i class="fas fa-plus me-1"></i>Add Entry
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if entries %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th><i class="fas fa-calendar me-1"></i>Date</th>
+                                <th><i class="fas fa-tasks me-1"></i>Tasks</th>
+                                <th><i class="fas fa-sticky-note me-1"></i>Notes</th>
+                                <th><i class="fas fa-paperclip me-1"></i>Attachments</th>
+                                {% if schedule.can_edit %}
+                                <th><i class="fas fa-cog me-1"></i>Actions</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in entries %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-primary">{{ entry.entry_date|date:"M d, Y" }}</span>
+                                </td>
+                                <td>{{ entry.tasks|linebreaks }}</td>
+                                <td>{{ entry.notes|default:"-"|linebreaks }}</td>
+                                <td>
+                                    {% if entry.attachments %}
+                                    <a href="{{ entry.attachments.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-download me-1"></i>View
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">No attachments</span>
+                                    {% endif %}
+                                </td>
+                                {% if schedule.can_edit %}
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary" disabled>
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" disabled>
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">No entries found</h5>
+                    <p class="text-muted">This schedule doesn't have any entries yet.</p>
+                    {% if schedule.can_edit %}
+                    <button class="btn btn-primary" disabled>
+                        <i class="fas fa-plus me-1"></i>Add First Entry
+                    </button>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
