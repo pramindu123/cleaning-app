@@ -1,0 +1,20 @@
+{% extends 'dean_office/base.html' %} {% load static %} {% block title %}Dean
+Office Reports{% endblock %} {% block content %}
+<div class="container mt-3">
+  <h1 class="h4">Reports</h1>
+  <p class="text-muted">
+    This is a placeholder for Dean Office reports and exports. Implement
+    filtering and exports here.
+  </p>
+
+  {% if reports %}
+  <ul>
+    {% for r in reports %}
+    <li>{{ r }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="alert alert-info">No reports available yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

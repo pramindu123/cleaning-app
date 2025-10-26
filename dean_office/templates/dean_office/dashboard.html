@@ -1,0 +1,102 @@
+{% extends 'dean_office/base.html' %} {% load static %} {% block title %}Dean
+Office Dashboard{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Dean Office Dashboard</h1>
+    <div>
+      <a href="{% url 'dean_office:reports' %}" class="btn btn-primary"
+        >Reports</a
+      >
+    </div>
+  </div>
+
+  <p class="text-muted">
+    Welcome to the Dean Office dashboard. Monitor cleaning operations and view
+    key performance indicators below.
+  </p>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          Current Cleaning Operations
+        </div>
+        <div class="card-body p-0">
+          {% if cleaning_operations %}
+          <div class="table-responsive">
+            <table class="table mb-0">
+              <thead>
+                <tr>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Assigned</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for op in cleaning_operations %}
+                <tr>
+                  <td>{{ op.location|default:'—' }}</td>
+                  <td>
+                    {% if op.status %}
+                    <span
+                      class="badge bg-{{ op.status|lower|default:'secondary' }}"
+                      >{{ op.status }}</span
+                    >
+                    {% else %}
+                    <span class="text-muted">Unknown</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ op.assigned_to|default:'—' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="p-3">No current cleaning operations.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card shadow">
+            <div class="card-header bg-info text-white">
+              Key Performance Indicators
+            </div>
+            <div class="card-body">
+              {% if kpis %}
+              <div class="row g-2">
+                {% for key, value in kpis.items %}
+                <div class="col-sm-6">
+                  <div class="border rounded p-2 h-100">
+                    <div class="small text-muted">{{ key|capfirst }}</div>
+                    <div class="h4 mb-0">{{ value }}</div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="text-muted">No KPIs available.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="card shadow">
+            <div class="card-header bg-secondary text-white">Monitoring</div>
+            <div class="card-body">
+              <div class="text-muted">
+                Realtime monitoring charts and alerts will appear here.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
