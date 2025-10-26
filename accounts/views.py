@@ -13,7 +13,9 @@ def signup_view(request):
     if request.method == 'POST':
         form = SignUpForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            user = form.save(commit=False)
+            # Faculty field is already handled by the form since it's in Meta.fields
+            user.save()
             login(request, user)
             messages.success(request, f'Account created successfully! Welcome, {user.username}!')
             return redirect('dashboard')

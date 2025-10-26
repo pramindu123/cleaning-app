@@ -37,13 +37,24 @@ class SignUpForm(UserCreationForm):
         choices=User.ROLE_CHOICES,
         required=True,
         widget=forms.Select(attrs={
-            'class': 'form-control'
+            'class': 'form-control',
+            'id': 'id_role'
         })
+    )
+    
+    faculty = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'id_faculty'
+        }),
+        help_text='Select the faculty (required for Dean Office role)'
     )
     
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'role', 'password1', 'password2')
+        fields = ('username', 'email', 'first_name', 'last_name', 'role', 'faculty', 'password1', 'password2')
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -53,6 +64,10 @@ class SignUpForm(UserCreationForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Import here to avoid circular import
+        from cleaning.models import Faculty
+        self.fields['faculty'].queryset = Faculty.objects.all().order_by('faculty_name')
+        
         self.fields['password1'].widget.attrs.update({
             'class': 'form-control',
             'placeholder': 'Password'
@@ -61,6 +76,17 @@ class SignUpForm(UserCreationForm):
             'class': 'form-control',
             'placeholder': 'Confirm password'
         })
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        role = cleaned_data.get('role')
+        faculty = cleaned_data.get('faculty')
+        
+        # If role is DEAN_OFFICE, faculty is required
+        if role == 'DEAN_OFFICE' and not faculty:
+            self.add_error('faculty', 'Faculty is required for Dean Office role.')
+        
+        return cleaned_data
 
 
 class LoginForm(AuthenticationForm):

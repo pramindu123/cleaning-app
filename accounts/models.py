@@ -18,6 +18,15 @@ class User(AbstractUser):
         help_text='User role in the system'
     )
     
+    faculty = models.ForeignKey(
+        'cleaning.Faculty',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='dean_users',
+        help_text='Faculty this dean office user is associated with (for DEAN_OFFICE role)'
+    )
+    
     class Meta:
         verbose_name = 'User'
         verbose_name_plural = 'Users'
