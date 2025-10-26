@@ -1,4 +1,5 @@
 {% comment %} Simplified activity calendar partial for embedding in forms {% endcomment %}
+<div class="js-cal-meta" data-frequency="{{ activity.frequency }}" data-anchor="{{ anchor_date|date:'Y-m-d' }}" style="display:none"></div>
 <div class="mb-2 d-flex justify-content-between align-items-center">
   <strong>{{ month_name }} {{ year }}</strong>
   {% if not lock_nav %}
@@ -43,10 +44,27 @@
           {% endif %}
 
           <div class="mt-2">
-            {% if not d.has_completed %}
-              <button type="button" class="btn btn-sm btn-outline-success js-complete-day" data-date="{{ d.date|date:'Y-m-d' }}">Mark Completed</button>
+            {% if activity.frequency == 'TWICE_DAILY' and not lock_nav %}
+              <div class="d-flex flex-column gap-1">
+                {# Slot 1 #}
+                {% if d.completed_count|default:0 >= 1 %}
+                  <span class="text-success small">Completed ✔</span>
+                {% else %}
+                  <button type="button" class="btn btn-sm btn-outline-success js-complete-day" data-date="{{ d.date|date:'Y-m-d' }}">Mark Completed</button>
+                {% endif %}
+                {# Slot 2 #}
+                {% if d.completed_count|default:0 >= 2 %}
+                  <span class="text-success small">Completed ✔</span>
+                {% else %}
+                  <button type="button" class="btn btn-sm btn-outline-success js-complete-day" data-date="{{ d.date|date:'Y-m-d' }}">Mark Completed</button>
+                {% endif %}
+              </div>
             {% else %}
-              <span class="text-success small">Completed ✔</span>
+              {% if not d.has_completed %}
+                <button type="button" class="btn btn-sm btn-outline-success js-complete-day" data-date="{{ d.date|date:'Y-m-d' }}">Mark Completed</button>
+              {% else %}
+                <span class="text-success small">Completed ✔</span>
+              {% endif %}
             {% endif %}
           </div>
           {% endif %}

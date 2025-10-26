@@ -8,6 +8,9 @@
         <h2>Cleaning Activities</h2>
         {% if user.is_manager %}
         <div class="btn-group">
+            <a href="{% url 'cleaning:faculty_list_report' %}" class="btn btn-success">
+                <i class="bi bi-building"></i> Faculty Reports
+            </a>
             <a href="{% url 'cleaning:activity_performance_report' %}" class="btn btn-info">
                 <i class="bi bi-graph-up"></i> Performance Report
             </a>

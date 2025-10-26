@@ -8,9 +8,14 @@
         <h2>Cleaning Records</h2>
         <div>
             {% if user.is_manager %}
+            <a href="{% url 'cleaning:faculty_list_report' %}" class="btn btn-success me-2">
+                <i class="bi bi-building"></i> Faculty Reports
+            </a>
             <a href="{% url 'cleaning:activity_performance_report' %}" class="btn btn-info me-2">
                 <i class="bi bi-graph-up"></i> Performance Report
             </a>
+            {% endif %}
+            {% if user.is_manager or user.is_assistant %}
             <a href="{% url 'cleaning:cleaning_record_create' %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Create New Record
             </a>
@@ -100,6 +105,9 @@
                             <td>
                                 <a href="{% url 'cleaning:cleaning_record_detail' record.pk %}" class="btn btn-sm btn-info">View</a>
                                 {% if user.is_manager and record.can_be_edited %}
+                                <a href="{% url 'cleaning:cleaning_record_update' record.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                                {% endif %}
+                                {% if user.is_assistant and record.assigned_to == user and record.can_be_edited %}
                                 <a href="{% url 'cleaning:cleaning_record_update' record.pk %}" class="btn btn-sm btn-warning">Edit</a>
                                 {% endif %}
                                 {% if user.is_assistant and record.assigned_to == user and record.status in 'PENDING,IN_PROGRESS' %}

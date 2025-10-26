@@ -8,7 +8,7 @@ import calendar
 from django.db.models import Q
 from django.http import JsonResponse
 from django.forms import inlineformset_factory, modelformset_factory
-from .models import CleaningRecord, CleaningActivity, Unit
+from .models import CleaningRecord, CleaningActivity, Unit, Faculty
 from .forms import (
     CleaningRecordForm, 
     CleaningVerificationForm, 
@@ -16,7 +16,6 @@ from .forms import (
     CleaningRecordFilterForm,
     CleaningActivityForm
 )
-
 
 @login_required
 def cleaning_record_list(request):
@@ -53,9 +52,10 @@ def cleaning_record_list(request):
 
 @login_required
 def cleaning_record_create(request):
-    """Create a new cleaning record (Manager only)"""
-    if not request.user.is_manager():
-        messages.error(request, 'Only managers can create cleaning records.')
+    """Create a new cleaning record (Managers and Assistants)"""
+    # Both managers and assistants can create records
+    if not (request.user.is_manager() or request.user.is_assistant()):
+        messages.error(request, 'You do not have permission to create cleaning records.')
         return redirect('cleaning:cleaning_record_list')
     
     # Support initial values from query params
@@ -66,34 +66,193 @@ def cleaning_record_create(request):
         initial['activity'] = request.GET.get('activity')
     if 'scheduled_date' in request.GET:
         initial['scheduled_date'] = request.GET.get('scheduled_date')
-    # scheduled_time removed from form; ignore any 'scheduled_time' query parameter
-
+    
+    # If assistant, set assigned_to to themselves
+    if request.user.is_assistant():
+        initial['assigned_to'] = request.user.id
+    
     if request.method == 'POST':
         form = CleaningRecordForm(request.POST)
         if form.is_valid():
             try:
-                record = form.save()
+                # Read any calendar-selected days (comma-separated YYYY-MM-DD)
+                raw_days = (request.POST.get('selected_days') or '').strip()
+                selected_days = [s for s in (raw_days.split(',') if raw_days else []) if s]
+
+                unit = form.cleaned_data['unit']
+                activity = form.cleaned_data.get('activity')
+                assigned_to = form.cleaned_data['assigned_to']
+                status = form.cleaned_data['status']
+                notes = form.cleaned_data.get('notes', '')
+
+                # If assistant is creating, force assign to themselves
+                if request.user.is_assistant():
+                    assigned_to = request.user
+
+                created_records = []
+                if selected_days:
+                    # Calendar-driven multi-day creation. Require an activity.
+                    if not activity:
+                        messages.error(request, 'Please select an activity to use the calendar selections.')
+                        raise ValueError('Activity required for calendar selections')
+
+                    # Establish biweekly anchor: earliest existing record date for the activity, or first selected date in this submission
+                    existing_anchor = CleaningRecord.objects.filter(activity=activity).order_by('scheduled_date').values_list('scheduled_date', flat=True).first()
+                    # Pre-parse selected dates to determine first selected anchor
+                    parsed_selected = []
+                    for s in selected_days:
+                        try:
+                            parsed_selected.append(datetime.strptime(s, '%Y-%m-%d').date())
+                        except Exception:
+                            continue
+                    parsed_selected.sort()
+                    session_anchor = existing_anchor or (parsed_selected[0] if parsed_selected else None)
+
+                    # Helper to enforce frequency rules similar to AJAX endpoint
+                    def can_create_for_day(act, scheduled_date):
+                        first_day = date(scheduled_date.year, scheduled_date.month, 1)
+                        _, dim = calendar.monthrange(scheduled_date.year, scheduled_date.month)
+                        last_day = date(scheduled_date.year, scheduled_date.month, dim)
+
+                        day_qs = CleaningRecord.objects.filter(activity=act, scheduled_date=scheduled_date)
+                        day_count = day_qs.count()
+
+                        month_completed = CleaningRecord.objects.filter(
+                            activity=act,
+                            scheduled_date__gte=first_day,
+                            scheduled_date__lte=last_day,
+                            status__in=['COMPLETED', 'VERIFIED']
+                        ).count()
+
+                        week_start = scheduled_date - timedelta(days=scheduled_date.weekday())
+                        week_end = week_start + timedelta(days=6)
+                        week_completed = CleaningRecord.objects.filter(
+                            activity=act,
+                            scheduled_date__gte=week_start,
+                            scheduled_date__lte=week_end,
+                            status__in=['COMPLETED', 'VERIFIED']
+                        ).count()
+
+                        freq = act.frequency
+                        if freq == 'TWICE_DAILY':
+                            return day_count < 2
+                        elif freq == 'DAILY':
+                            return day_count < 1
+                        elif freq == 'EVERY_2_DAYS':
+                            # Use existing anchor if available; otherwise allow first selected to establish anchor
+                            if session_anchor:
+                                return ((scheduled_date - session_anchor).days % 2) == 0 and day_count < 1
+                            return day_count < 1
+                        elif freq == 'WEEKLY':
+                            return week_completed < 1 and day_count < 1
+                        elif freq == 'BIWEEKLY':
+                            if session_anchor:
+                                return ((scheduled_date - session_anchor).days % 14) == 0 and day_count < 1
+                            return day_count < 1
+                        elif freq == 'MONTHLY':
+                            return month_completed < 1 and day_count < 1
+                        return False
+
+                    for s in selected_days:
+                        try:
+                            sd = datetime.strptime(s, '%Y-%m-%d').date()
+                        except Exception:
+                            continue
+                        # Ensure date is within the selected month from the form's scheduled_date
+                        sched_month = form.cleaned_data['scheduled_date']
+                        if sd.year != sched_month.year or sd.month != sched_month.month:
+                            continue
+                        if not can_create_for_day(activity, sd):
+                            continue
+
+                        # For TWICE_DAILY, create up to two records per day (fill missing ones)
+                        if activity.frequency == 'TWICE_DAILY':
+                            existing_for_day = list(CleaningRecord.objects.filter(activity=activity, scheduled_date=sd).order_by('id'))
+                            missing = max(0, 2 - len(existing_for_day))
+                            # Optional time slots to differentiate records
+                            slots = [dtime(9, 0), dtime(15, 0)]
+                            used_times = {r.scheduled_time for r in existing_for_day if r.scheduled_time}
+                            for _ in range(missing):
+                                rec = CleaningRecord(
+                                    unit=unit,
+                                    activity=activity,
+                                    assigned_to=assigned_to,
+                                    scheduled_date=sd,
+                                    status=status,
+                                    notes=notes,
+                                )
+                                # assign an unused slot if available
+                                for t in slots:
+                                    if t not in used_times:
+                                        rec.scheduled_time = t
+                                        used_times.add(t)
+                                        break
+                                if status in ['COMPLETED', 'VERIFIED']:
+                                    rec.completed_date = timezone.now()
+                                rec.save()
+                                created_records.append(rec)
+                        else:
+                            rec = CleaningRecord(
+                                unit=unit,
+                                activity=activity,
+                                assigned_to=assigned_to,
+                                scheduled_date=sd,
+                                status=status,
+                                notes=notes,
+                            )
+                            if status in ['COMPLETED', 'VERIFIED']:
+                                rec.completed_date = timezone.now()
+                            rec.save()
+                            created_records.append(rec)
+
+                    if created_records:
+                        messages.success(request, f'Created {len(created_records)} cleaning record(s) for the selected days.')
+                        return redirect('cleaning:cleaning_record_list')
+                    else:
+                        messages.warning(request, 'No records were created from the selected days (may be due to frequency limits or invalid dates).')
+                        # Fall through to create single record as configured below
+
+                # Default single-record creation path
+                record = form.save(commit=False)
+                if request.user.is_assistant():
+                    record.assigned_to = request.user
+                record.save()
                 messages.success(request, f'Cleaning record created successfully for {record.unit.unit_name}.')
                 return redirect('cleaning:cleaning_record_detail', pk=record.pk)
             except Exception as e:
-                messages.error(request, f'Error creating cleaning record: {str(e)}')
+                # If we raised a handled validation above, the message already set
+                if 'Activity required for calendar selections' not in str(e):
+                    messages.error(request, f'Error creating cleaning record: {str(e)}')
     else:
         form = CleaningRecordForm(initial=initial)
+        
+        # If assistant, make assigned_to field read-only and hidden
+        if request.user.is_assistant():
+            form.fields['assigned_to'].disabled = True
+            form.fields['assigned_to'].initial = request.user
+            form.fields['assigned_to'].widget.attrs['style'] = 'display:none;'
     
     context = {
         'form': form,
         'action': 'Create',
+        'is_assistant': request.user.is_assistant(),
     }
     return render(request, 'cleaning/cleaning_record_form.html', context)
 
 
 @login_required
 def cleaning_record_update(request, pk):
-    """Update an existing cleaning record (Manager only)"""
+    """Update an existing cleaning record (Managers and Assistants)"""
     record = get_object_or_404(CleaningRecord, pk=pk)
     
-    if not request.user.is_manager():
-        messages.error(request, 'Only managers can edit cleaning records.')
+    # Check permissions
+    if request.user.is_assistant():
+        # Assistants can only edit their own records
+        if record.assigned_to != request.user:
+            messages.error(request, 'You can only edit your own cleaning records.')
+            return redirect('cleaning:cleaning_record_detail', pk=pk)
+    elif not request.user.is_manager():
+        messages.error(request, 'You do not have permission to edit cleaning records.')
         return redirect('cleaning:cleaning_record_detail', pk=pk)
     
     if not record.can_be_edited():
@@ -104,18 +263,31 @@ def cleaning_record_update(request, pk):
         form = CleaningRecordForm(request.POST, instance=record)
         if form.is_valid():
             try:
-                record = form.save()
+                updated_record = form.save(commit=False)
+                
+                # If assistant is editing, ensure assigned_to doesn't change
+                if request.user.is_assistant():
+                    updated_record.assigned_to = request.user
+                
+                updated_record.save()
                 messages.success(request, 'Cleaning record updated successfully.')
-                return redirect('cleaning:cleaning_record_detail', pk=record.pk)
+                return redirect('cleaning:cleaning_record_detail', pk=updated_record.pk)
             except Exception as e:
                 messages.error(request, f'Error updating cleaning record: {str(e)}')
     else:
         form = CleaningRecordForm(instance=record)
+        
+        # If assistant, make assigned_to field read-only and hidden
+        if request.user.is_assistant():
+            form.fields['assigned_to'].disabled = True
+            form.fields['assigned_to'].initial = request.user
+            form.fields['assigned_to'].widget.attrs['style'] = 'display:none;'
     
     context = {
         'form': form,
         'record': record,
         'action': 'Update',
+        'is_assistant': request.user.is_assistant(),
     }
     return render(request, 'cleaning/cleaning_record_form.html', context)
 
@@ -645,8 +817,18 @@ def cleaning_activity_calendar_partial(request, pk):
                 continue
             records = by_day.get(d, [])
             has_completed = any(r['status'] in ('COMPLETED', 'VERIFIED') for r in records)
-            row.append({'date': d, 'is_current': True, 'records': records, 'has_completed': has_completed})
+            completed_count = sum(1 for r in records if r['status'] in ('COMPLETED', 'VERIFIED'))
+            row.append({
+                'date': d,
+                'is_current': True,
+                'records': records,
+                'has_completed': has_completed,
+                'completed_count': completed_count,
+            })
         month_weeks.append(row)
+
+    # Determine biweekly anchor date: earliest existing scheduled_date for this activity (global), if any
+    earliest = CleaningRecord.objects.filter(activity=activity).order_by('scheduled_date').values_list('scheduled_date', flat=True).first()
 
     context = {
         'activity': activity,
@@ -657,6 +839,7 @@ def cleaning_activity_calendar_partial(request, pk):
         'month_weeks': month_weeks,
         'lock_nav': lock_nav,
         'monthly_completed_count': monthly_completed_count,
+        'anchor_date': earliest,
     }
     return render(request, 'cleaning/partials/activity_calendar_partial.html', context)
 
@@ -714,8 +897,9 @@ def mark_activity_completed_day(request, pk):
     ).count()
 
     # Anchor for modulo-based schedules
-    anchor_dt = getattr(activity, 'created_at', None)
-    anchor_date = anchor_dt.date() if anchor_dt else first_day
+    # For biweekly logic, anchor to earliest existing scheduled_date for this activity if available; otherwise allow first selection to establish anchor
+    earliest_existing = CleaningRecord.objects.filter(activity=activity).order_by('scheduled_date').values_list('scheduled_date', flat=True).first()
+    anchor_date = earliest_existing or first_day
 
     freq = activity.frequency
     # Enforce according to frequency
@@ -726,9 +910,11 @@ def mark_activity_completed_day(request, pk):
         if day_count >= 1:
             return JsonResponse({'ok': False, 'error': 'Already marked for this day.'}, status=400)
     elif freq == 'EVERY_2_DAYS':
-        # Only allow on alternating days relative to anchor
-        if ((scheduled_date - anchor_date).days % 2) != 0:
-            return JsonResponse({'ok': False, 'error': 'This day is not part of the every-2-days schedule.'}, status=400)
+        # If we have an anchor (earliest existing record), enforce every 2 days from that anchor.
+        # If no anchor yet, allow this selection (it will implicitly establish the start date).
+        if earliest_existing:
+            if ((scheduled_date - anchor_date).days % 2) != 0:
+                return JsonResponse({'ok': False, 'error': f'This day is not part of the 2-day cycle starting on {anchor_date}.'}, status=400)
         if day_count >= 1:
             return JsonResponse({'ok': False, 'error': 'Already marked for this day.'}, status=400)
     elif freq == 'WEEKLY':
@@ -738,9 +924,10 @@ def mark_activity_completed_day(request, pk):
         if day_count >= 1:
             return JsonResponse({'ok': False, 'error': 'Already marked for this day.'}, status=400)
     elif freq == 'BIWEEKLY':
-        # Allow only on anchor-aligned biweekly days
-        if ((scheduled_date - anchor_date).days % 14) != 0:
-            return JsonResponse({'ok': False, 'error': 'This day is not part of the biweekly schedule.'}, status=400)
+        # Allow only every 14 days from the start date. If no previous records exist, accept any date (it becomes the start).
+        if earliest_existing:
+            if ((scheduled_date - anchor_date).days % 14) != 0:
+                return JsonResponse({'ok': False, 'error': f'This day is not part of the 14-day cycle starting on {anchor_date}.'}, status=400)
         if day_count >= 1:
             return JsonResponse({'ok': False, 'error': 'Already marked for this day.'}, status=400)
     elif freq == 'MONTHLY':
@@ -751,6 +938,34 @@ def mark_activity_completed_day(request, pk):
             return JsonResponse({'ok': False, 'error': 'Already marked for this day.'}, status=400)
 
     # Create or update the record as completed
+    # For TWICE_DAILY, prefer completing an existing non-completed record; otherwise create a new one
+    if freq == 'TWICE_DAILY':
+        # Try to find an existing non-completed record for this day
+        record = day_qs.exclude(status__in=['COMPLETED', 'VERIFIED']).order_by('id').first()
+        if not record:
+            # Create a new record (second mark)
+            record = CleaningRecord(
+                unit=activity.unit,
+                activity=activity,
+                assigned_to=assigned_to or request.user,
+                scheduled_date=scheduled_date,
+            )
+            # Assign a time slot if available to differentiate
+            existing_times = set(day_qs.values_list('scheduled_time', flat=True))
+            for slot in (dtime(9, 0), dtime(15, 0)):
+                if slot not in existing_times:
+                    record.scheduled_time = slot
+                    break
+        else:
+            if assigned_to and not record.assigned_to:
+                record.assigned_to = assigned_to
+
+        record.status = 'COMPLETED'
+        record.completed_date = timezone.now()
+        record.save()
+        return JsonResponse({'ok': True, 'record_id': record.id, 'status': record.status})
+
+    # Default behavior for other frequencies: create or update single record
     record = day_qs.order_by('id').first()
     if not record:
         record = CleaningRecord(
@@ -835,6 +1050,129 @@ def activity_performance_report(request):
         'months': months,
     }
     return render(request, 'cleaning/activity_performance_report.html', context)
+
+
+@login_required
+def faculty_cleaning_report(request, faculty_id):
+    """Display cleaning details for all units associated with a faculty"""
+    if not request.user.is_manager():
+        messages.error(request, 'Only managers can view faculty reports.')
+        return redirect('cleaning:cleaning_record_list')
+    
+    faculty = get_object_or_404(Faculty, pk=faculty_id)
+    
+    # Get year and month from query params, default to current month
+    today = date.today()
+    year = int(request.GET.get('year', today.year))
+    month = int(request.GET.get('month', today.month))
+    
+    # Get all units associated with this faculty
+    units = faculty.units.filter(is_active=True).select_related('zone', 'section').prefetch_related('cleaning_activities')
+    
+    # Prepare data for each unit
+    units_data = []
+    total_activities = 0
+    total_expected = 0
+    total_actual = 0
+    
+    for unit in units:
+        activities = unit.cleaning_activities.filter(is_active=True)
+        activity_stats = []
+        
+        unit_expected = 0
+        unit_actual = 0
+        
+        for activity in activities:
+            expected = activity.get_expected_completions_for_month(year, month)
+            actual = activity.get_actual_completions_for_month(year, month)
+            actual_pct = activity.get_completion_percentage_for_month(year, month)
+            budgeted_pct = float(activity.budget_percentage)
+            variance = activity.get_variance_percentage_for_month(year, month)
+            
+            activity_stats.append({
+                'activity': activity,
+                'frequency': activity.get_frequency_display(),
+                'expected_completions': expected,
+                'actual_completions': actual,
+                'actual_percentage': actual_pct,
+                'budgeted_percentage': budgeted_pct,
+                'variance': variance,
+                'variance_class': 'text-success' if variance >= 0 else 'text-danger',
+            })
+            
+            unit_expected += expected
+            unit_actual += actual
+        
+        # Calculate unit-level completion percentage
+        unit_completion_pct = round((unit_actual / unit_expected * 100), 2) if unit_expected > 0 else 0
+        
+        units_data.append({
+            'unit': unit,
+            'activities': activity_stats,
+            'activity_count': activities.count(),
+            'total_expected': unit_expected,
+            'total_actual': unit_actual,
+            'completion_percentage': unit_completion_pct,
+        })
+        
+        total_activities += activities.count()
+        total_expected += unit_expected
+        total_actual += unit_actual
+    
+    # Calculate faculty-level statistics
+    faculty_completion_pct = round((total_actual / total_expected * 100), 2) if total_expected > 0 else 0
+    
+    # Generate month/year options for selection
+    months = []
+    for i in range(12):  # Last 12 months
+        d = today.replace(day=1) - timedelta(days=30*i)
+        months.append({'year': d.year, 'month': d.month, 'display': d.strftime('%B %Y')})
+    
+    context = {
+        'faculty': faculty,
+        'units_data': units_data,
+        'selected_year': year,
+        'selected_month': month,
+        'selected_month_display': date(year, month, 1).strftime('%B %Y'),
+        'months': months,
+        'total_units': units.count(),
+        'total_activities': total_activities,
+        'total_expected': total_expected,
+        'total_actual': total_actual,
+        'faculty_completion_pct': faculty_completion_pct,
+    }
+    return render(request, 'cleaning/faculty_cleaning_report.html', context)
+
+
+@login_required
+def faculty_list_report(request):
+    """List all faculties for cleaning report access"""
+    if not request.user.is_manager():
+        messages.error(request, 'Only managers can view faculty reports.')
+        return redirect('cleaning:cleaning_record_list')
+    
+    faculties = Faculty.objects.all().order_by('faculty_name')
+    
+    # Add unit counts to each faculty
+    faculties_data = []
+    for faculty in faculties:
+        unit_count = faculty.units.filter(is_active=True).count()
+        activity_count = CleaningActivity.objects.filter(
+            unit__faculty=faculty,
+            is_active=True
+        ).count()
+        
+        faculties_data.append({
+            'faculty': faculty,
+            'unit_count': unit_count,
+            'activity_count': activity_count,
+        })
+    
+    context = {
+        'faculties_data': faculties_data,
+    }
+    return render(request, 'cleaning/faculty_list_report.html', context)
+
 
 
 

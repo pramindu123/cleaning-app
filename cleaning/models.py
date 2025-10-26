@@ -37,6 +37,10 @@ class Zone(models.Model):
         """Return the total number of units across all sections in this zone"""
         return Unit.objects.filter(section__zone=self).count()
 
+    def get_faculties_count(self):
+        """Return the number of faculties associated with this zone"""
+        return self.faculties.count()
+
 
 class Section(models.Model):
     """
@@ -88,6 +92,15 @@ class Faculty(models.Model):
         unique=True,
         help_text="Full name of the faculty"
     )
+    # Optional association to a Zone (a zone can have many faculties)
+    zone = models.ForeignKey(
+        'Zone',
+        on_delete=models.PROTECT,
+        related_name='faculties',
+        null=True,
+        blank=True,
+        help_text="Zone this faculty belongs to (optional)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -97,6 +110,8 @@ class Faculty(models.Model):
         ordering = ['faculty_name']
     
     def __str__(self):
+        if self.zone:
+            return f"{self.faculty_name} ({self.zone.zone_name})"
         return self.faculty_name
     
     def get_units_count(self):
@@ -177,6 +192,10 @@ class Unit(models.Model):
         # If section is provided, validate it belongs to the same zone
         if self.section and self.section.zone_id != self.zone_id:
             raise ValidationError(f'Section "{self.section.section_name}" does not belong to zone "{self.zone.zone_name}".')
+        
+        # If faculty has a zone, ensure it matches the unit's zone
+        if self.faculty and self.faculty.zone_id and self.faculty.zone_id != self.zone_id:
+            raise ValidationError(f'Faculty "{self.faculty.faculty_name}" is associated with zone "{self.faculty.zone.zone_name}", which does not match the unit zone "{self.zone.zone_name}".')
     
     def get_zone(self):
         """Get the zone this unit belongs to"""

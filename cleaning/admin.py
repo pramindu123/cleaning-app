@@ -4,7 +4,7 @@ from .models import Zone, Section, Faculty, Unit, CleaningActivity, CleaningReco
 
 @admin.register(Zone)
 class ZoneAdmin(admin.ModelAdmin):
-    list_display = ['zone_name', 'description', 'get_sections_count', 'get_units_count', 'created_at']
+    list_display = ['zone_name', 'description', 'get_sections_count', 'get_units_count', 'get_faculties_count', 'created_at']
     search_fields = ['zone_name', 'description']
     list_filter = ['created_at']
     readonly_fields = ['id', 'created_at', 'updated_at']
@@ -26,6 +26,10 @@ class ZoneAdmin(admin.ModelAdmin):
     def get_units_count(self, obj):
         return obj.get_units_count()
     get_units_count.short_description = 'Total Units'
+    
+    def get_faculties_count(self, obj):
+        return obj.get_faculties_count()
+    get_faculties_count.short_description = 'Faculties'
 
 
 @admin.register(Section)
@@ -60,14 +64,15 @@ class SectionAdmin(admin.ModelAdmin):
 
 @admin.register(Faculty)
 class FacultyAdmin(admin.ModelAdmin):
-    list_display = ['faculty_name', 'get_units_count', 'get_active_units_count', 'created_at']
-    search_fields = ['faculty_name']
-    list_filter = ['created_at']
+    list_display = ['faculty_name', 'zone', 'get_units_count', 'get_active_units_count', 'created_at']
+    search_fields = ['faculty_name', 'zone__zone_name']
+    list_filter = ['zone', 'created_at']
+    list_select_related = ['zone']
     readonly_fields = ['id', 'created_at', 'updated_at']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('id', 'faculty_name')
+            'fields': ('id', 'faculty_name', 'zone')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

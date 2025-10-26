@@ -108,6 +108,10 @@
                             <a href="{% url 'cleaning:cleaning_record_delete' record.pk %}" class="btn btn-danger">Delete</a>
                             {% endif %}
                             
+                            {% if user.is_assistant and record.assigned_to == user and record.can_be_edited %}
+                            <a href="{% url 'cleaning:cleaning_record_update' record.pk %}" class="btn btn-warning">Edit</a>
+                            {% endif %}
+                            
                             {% if user.is_assistant and record.assigned_to == user and record.status in 'PENDING,IN_PROGRESS' %}
                             <a href="{% url 'cleaning:cleaning_record_complete' record.pk %}" class="btn btn-success">Mark as Completed</a>
                             {% endif %}

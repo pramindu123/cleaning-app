@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Faculty Cleaning Reports{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Faculty Cleaning Reports</h2>
+        <div>
+            <a href="{% url 'cleaning:cleaning_record_list' %}" class="btn btn-outline-secondary">Back to Records</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Select a Faculty to View Cleaning Details</h5>
+                </div>
+                <div class="card-body">
+                    {% if faculties_data %}
+                    <div class="list-group">
+                        {% for item in faculties_data %}
+                        <a href="{% url 'cleaning:faculty_cleaning_report' item.faculty.id %}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">{{ item.faculty.faculty_name }}</h5>
+                                    <p class="mb-0 text-muted">
+                                        <i class="bi bi-building"></i> {{ item.unit_count }} Unit{{ item.unit_count|pluralize }}
+                                        <span class="mx-2">|</span>
+                                        <i class="bi bi-list-check"></i> {{ item.activity_count }} Activit{{ item.activity_count|pluralize:"y,ies" }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <i class="bi bi-chevron-right"></i>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <p class="mb-0">No faculties found in the system.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

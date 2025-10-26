@@ -15,6 +15,8 @@ urlpatterns = [
     
     # Performance Reports
     path('reports/performance/', views.activity_performance_report, name='activity_performance_report'),
+    path('reports/faculties/', views.faculty_list_report, name='faculty_list_report'),
+    path('reports/faculty/<int:faculty_id>/', views.faculty_cleaning_report, name='faculty_cleaning_report'),
     
     # Cleaning Activity URLs
     path('activities/', views.cleaning_activity_list, name='cleaning_activity_list'),
