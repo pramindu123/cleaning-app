@@ -1,592 +1,450 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assistant Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #4e73df;
-            --secondary-color: #858796;
-            --success-color: #1cc88a;
-            --warning-color: #f6c23e;
-            --danger-color: #e74a3b;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .navbar {
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-        }
-        
-        .navbar-brand, .nav-link {
-            color: #4e73df !important;
-            font-weight: 600;
-        }
-        
-        .container-fluid {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            margin-top: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            flex: 1;
-        }
-        
-        .card {
-            border: none;
-            background: rgba(255,255,255,0.9);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-        }
-        
-        .card:hover {
-            transform: translateY(-10px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        }
-        
-        .stats-card {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .stats-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: linear-gradient(45deg, var(--primary-color), var(--success-color));
-            animation: pulse 2s infinite;
-        }
-        
-        .stats-card.draft::before { background: linear-gradient(45deg, #4e73df, #36b9cc); }
-        .stats-card.review::before { background: linear-gradient(45deg, #f6c23e, #fd7e14); }
-        .stats-card.approved::before { background: linear-gradient(45deg, #1cc88a, #20c997); }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .schedule-item {
-            background: rgba(255,255,255,0.8);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
-            transition: all 0.3s ease;
-            animation: fadeInUp 0.6s ease;
-        }
-        
-        .schedule-item:hover {
-            background: rgba(255,255,255,0.95);
-            transform: translateX(10px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .btn {
-            border-radius: 25px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-        
-        .btn:hover::before {
-            left: 100%;
-        }
-        
-        .badge {
-            border-radius: 20px;
-            padding: 8px 15px;
-            font-weight: 600;
-            animation: bounce 2s infinite;
-        }
-        
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-5px); }
-            60% { transform: translateY(-3px); }
-        }
-        
-        h2, h6 {
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .card-header {
-            background: linear-gradient(135deg, var(--primary-color), #36b9cc);
-            color: white;
-            border-radius: 15px 15px 0 0 !important;
-        }
-        
-        .stats-card .fa-2x {
-            animation: rotate 3s linear infinite;
-        }
-        
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        .dark-mode-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            background: rgba(255,255,255,0.2);
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            color: white;
-            font-size: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        .dark-mode-toggle:hover {
-            background: rgba(255,255,255,0.3);
-            transform: scale(1.1);
-        }
-        
-        .bg-gradient-primary {
-            background: linear-gradient(135deg, #4e73df, #36b9cc);
-        }
-        
-        .bg-gradient-success {
-            background: linear-gradient(135deg, #1cc88a, #20c997);
-        }
-        
-        .list-group-item {
-            border: none;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-        }
-        
-        .list-group-item:hover {
-            background: linear-gradient(135deg, rgba(78, 115, 223, 0.1), rgba(54, 185, 204, 0.1));
-            transform: translateX(5px);
-        }
-        
-        .sidebar-card {
-            position: sticky;
-            top: 20px;
-        }
-        
-        .area-badge {
-            font-size: 0.7rem;
-            padding: 4px 8px;
-            border-radius: 12px;
-        }
-        
-        .stats-number {
-            font-size: 1.5rem;
-            font-weight: 700;
-            line-height: 1;
-        }
-        
-        .sidebar-container {
-            position: sticky;
-            top: 20px;
-            max-height: calc(100vh - 40px);
-        }
-        
-        .bg-gradient-info {
-            background: linear-gradient(135deg, #36b9cc, #3dd5f3);
-        }
-        
-        .area-item {
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .area-item:hover {
-            background: linear-gradient(135deg, rgba(78, 115, 223, 0.05), rgba(54, 185, 204, 0.05));
-            transform: translateX(5px);
-            border-left: 4px solid #4e73df;
-        }
-        
-        .area-item:last-child {
-            border-bottom: none !important;
-        }
-        
-        .area-details {
-            font-size: 0.85rem;
-        }
-        
-        .area-badge {
-            font-size: 0.65rem;
-            padding: 4px 8px;
-            border-radius: 10px;
-            font-weight: 600;
-        }
-        
-        /* Custom scrollbar */
-        .card-body::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .card-body::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        .card-body::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #4e73df, #36b9cc);
-            border-radius: 10px;
-        }
-        
-        .card-body::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #3d5aa3, #2a9bb7);
-        }
-        
-        .footer {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            padding: 20px 0;
-            margin-top: auto;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        }
-        
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-    </style>
-</head>
-<body>
-    <button class="dark-mode-toggle" onclick="toggleDarkMode()">
-        <i class="fas fa-moon"></i>
-    </button>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="{% url 'assistant:dashboard' %}">
-                <i class="fas fa-calendar-check me-2"></i>
-                Schedule Management System
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{% url 'assistant:profile' %}">
-                    <i class="fas fa-user-circle me-1"></i>{{ request.user.get_full_name }}
-                </a>
-                <a class="nav-link" href="{% url 'assistant:schedule_list' %}">
-                    <i class="fas fa-list me-1"></i>Schedules
-                </a>
-                <a class="nav-link" href="/accounts/logout/">
-                    <i class="fas fa-sign-out-alt me-1"></i>Logout
-                </a>
-            </div>
-        </div>
-    </nav>
+{% extends 'base.html' %}
+{% load static %}
 
-    <div class="container-fluid mt-4">
-        <div class="row">
-            <!-- Left Sidebar -->
-            <div class="col-md-3">
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0"><i class="fas fa-building me-2"></i>My Areas</h6>
-                    </div>
-                    <div class="card-body p-0">
-                        {% for area in allocated_areas %}
-                        <div class="list-group-item border-0 p-3">
-                            <h6 class="mb-1">{{ area.name }}</h6>
-                            <small class="text-muted">{{ area.section.name }} - {{ area.unit_type }}</small>
-                        </div>
-                        {% empty %}
-                        <div class="p-3 text-center">
-                            <p class="text-muted mb-0">No areas assigned</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Main Content -->
-            <div class="col-md-9">
-                <h2>Assistant Dashboard</h2>
-        
-        {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        <!-- Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card stats-card draft h-100">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Draft Schedules</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_draft }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card stats-card review h-100">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Under Review</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_submitted }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-clock fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card stats-card approved h-100">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Approved</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_approved }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+{% block title %}Assistant Dashboard - USJ Cleaning App{% endblock %}
 
-        <!-- Recent Schedules -->
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card shadow">
-                    <div class="card-header py-3 d-flex align-items-center justify-content-between">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-file-alt me-2"></i>Recent Draft Schedules
-                        </h6>
-                        <a href="{% url 'assistant:schedule_list' %}?status=draft" class="btn btn-sm btn-primary">
-                            View All <i class="fas fa-arrow-right ms-1"></i>
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        {% for schedule in draft_schedules %}
-                        <div class="schedule-item d-flex justify-content-between align-items-center mb-2 p-3 border rounded">
-                            <div>
-                                <h6 class="mb-1"><i class="fas fa-building me-2 text-primary"></i>{{ schedule.unit.name }}</h6>
-                                <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i>{{ schedule.month|date:"F Y" }}</small>
-                            </div>
-                            <a href="{% url 'assistant:schedule_detail' schedule.pk %}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-edit me-1"></i>Edit
-                            </a>
-                        </div>
-                        {% empty %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-clipboard fa-3x text-gray-300 mb-3"></i>
-                            <p class="text-muted mb-0">No draft schedules available.</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #667eea;
+        --secondary-color: #764ba2;
+        --success-color: #1cc88a;
+        --warning-color: #f6c23e;
+        --danger-color: #e74a3b;
+        --info-color: #36b9cc;
+    }
+    
+    body {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        min-height: 100vh;
+    }
+    
+    .dashboard-header {
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stats-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 80px;
+        height: 80px;
+        opacity: 0.1;
+        font-size: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stats-card.pending { border-left-color: var(--warning-color); }
+    .stats-card.completed { border-left-color: var(--success-color); }
+    .stats-card.in-progress { border-left-color: var(--info-color); }
+    .stats-card.verified { border-left-color: var(--primary-color); }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 10px 0;
+    }
+    
+    .stats-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .stats-icon {
+        font-size: 2.5rem;
+        opacity: 0.2;
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .task-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .task-item {
+        background: #f8f9fc;
+        border-left: 4px solid;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .task-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .task-item.pending { border-left-color: var(--warning-color); }
+    .task-item.completed { border-left-color: var(--success-color); }
+    .task-item.in-progress { border-left-color: var(--info-color); }
+    .task-item.verified { border-left-color: var(--primary-color); }
+    
+    .badge-status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .badge-pending { background: #fff3cd; color: #856404; }
+    .badge-completed { background: #d4edda; color: #155724; }
+    .badge-in-progress { background: #d1ecf1; color: #0c5460; }
+    .badge-verified { background: #cfe2ff; color: #084298; }
+    
+    .progress-circle {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .quick-action-btn {
+        flex: 1;
+        min-width: 150px;
+        padding: 15px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        color: white;
+    }
+    
+    .quick-action-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: #2c3e50;
+        position: relative;
+        padding-bottom: 10px;
+    }
+    
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        border-radius: 2px;
+    }
+    
+    .unit-badge {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        display: inline-block;
+        margin: 5px;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        opacity: 0.3;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-tasks me-2"></i>
+                    Welcome, {{ user.get_full_name|default:user.username }}!
+                </h1>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-user-tag me-2"></i>{{ user.get_role_display }}
+                    <span class="ms-3"><i class="far fa-calendar me-2"></i>{% now "l, F d, Y" %}</span>
+                </p>
             </div>
-            
-            <div class="col-md-6">
-                <div class="card shadow">
-                    <div class="card-header py-3 d-flex align-items-center justify-content-between">
-                        <h6 class="m-0 font-weight-bold text-warning">
-                            <i class="fas fa-clock me-2"></i>Submitted Schedules
-                        </h6>
-                        <a href="{% url 'assistant:schedule_list' %}?status=submitted" class="btn btn-sm btn-warning">
-                            View All <i class="fas fa-arrow-right ms-1"></i>
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        {% for schedule in submitted_schedules %}
-                        <div class="schedule-item d-flex justify-content-between align-items-center mb-2 p-3 border rounded">
-                            <div>
-                                <h6 class="mb-1"><i class="fas fa-building me-2 text-warning"></i>{{ schedule.unit.name }}</h6>
-                                <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i>{{ schedule.month|date:"F Y" }}</small>
-                            </div>
-                            <span class="badge bg-warning rounded-pill">
-                                <i class="fas fa-hourglass-half me-1"></i>Under Review
-                            </span>
-                        </div>
-                        {% empty %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-clock fa-3x text-gray-300 mb-3"></i>
-                            <p class="text-muted mb-0">No schedules under review.</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-                </div>
-                
-                <div class="mt-4">
-                    <a href="{% url 'assistant:schedule_list' %}" class="btn btn-outline-primary">View All Schedules</a>
+            <div class="col-md-4 text-end">
+                <div class="quick-actions">
+                    <a href="{% url 'assistant:profile' %}" class="btn btn-info quick-action-btn">
+                        <i class="fas fa-user me-2"></i>Profile
+                    </a>
+                    <a href="{% url 'logout' %}" class="btn btn-danger quick-action-btn" onclick="return confirm('Are you sure you want to logout?');">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="footer mt-5">
-        <div class="container-fluid">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <p class="mb-0 text-white">
-                        <i class="fas fa-university me-2"></i>
-                        © 2024 USJ Cleaning Management System
-                    </p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <p class="mb-0 text-white">
-                        <i class="fas fa-user-tie me-1"></i>Assistant Portal
-                        <span class="mx-2">|</span>
-                        <i class="fas fa-phone me-1"></i>Support: +94 11 123 4567
-                    </p>
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card pending">
+                <div class="stats-label">Pending Tasks</div>
+                <div class="stats-number text-warning">{{ total_pending }}</div>
+                <small class="text-muted">Awaiting action</small>
+                <i class="fas fa-clock stats-icon text-warning"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card in-progress">
+                <div class="stats-label">In Progress</div>
+                <div class="stats-number text-info">{{ total_in_progress }}</div>
+                <small class="text-muted">Currently working</small>
+                <i class="fas fa-spinner stats-icon text-info"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card completed">
+                <div class="stats-label">Completed</div>
+                <div class="stats-number text-success">{{ total_completed }}</div>
+                <small class="text-muted">Successfully finished</small>
+                <i class="fas fa-check-circle stats-icon text-success"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card verified">
+                <div class="stats-label">Verified</div>
+                <div class="stats-number text-primary">{{ total_verified }}</div>
+                <small class="text-muted">Manager approved</small>
+                <i class="fas fa-certificate stats-icon text-primary"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Activities (from assigned units) -->
+    <div class="row">
+        <div class="col-12">
+            <div class="task-card">
+                <h3 class="section-title">
+                    <i class="fas fa-broom me-2"></i>My Activities
+                </h3>
+                {% if my_activities %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%">Unit</th>
+                                    <th style="width: 35%">Activity</th>
+                                    <th style="width: 15%">Frequency</th>
+                                    <th style="width: 15%">Status</th>
+                                    <th style="width: 15%" class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for act in my_activities %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ act.unit.unit_name }}</strong><br>
+                                        <small class="text-muted">{{ act.unit.get_full_location }}</small>
+                                    </td>
+                                    <td>{{ act.activity_name }}</td>
+                                    <td><span class="badge bg-secondary">{{ act.get_frequency_display }}</span></td>
+                                    <td>
+                                        {% if act.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'cleaning:cleaning_record_create' %}?unit={{ act.unit.id }}&activity={{ act.id }}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-check-circle me-1"></i>Mark Now
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if activities_total > my_activities|length %}
+                    <div class="text-center text-muted small">
+                        Showing {{ my_activities|length }} of {{ activities_total }} activities
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-broom"></i>
+                        <p>No activities found for your assigned units</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Completed Activities -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="task-card">
+                <h3 class="section-title">
+                    <i class="fas fa-check-double me-2"></i>Completed Activities
+                </h3>
+                {% if completed_activities %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%">Unit</th>
+                                    <th style="width: 30%">Activity</th>
+                                    <th style="width: 15%">Completed Date</th>
+                                    <th style="width: 15%">Status</th>
+                                    <th style="width: 20%" class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in completed_activities %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ record.unit.unit_name }}</strong><br>
+                                        <small class="text-muted">{{ record.unit.get_full_location }}</small>
+                                    </td>
+                                    <td>
+                                        {% if record.activity %}
+                                            {{ record.activity.activity_name }}
+                                        {% else %}
+                                            General Cleaning
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ record.completed_date|date:"M d, Y" }}<br>
+                                        <small class="text-muted">{{ record.completed_date|time:"g:i A" }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge-status badge-{{ record.status|lower }}">
+                                            {{ record.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'cleaning:cleaning_record_detail' record.pk %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye me-1"></i>View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center text-muted small">
+                        Showing recent 10 completed activities
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="far fa-list-alt"></i>
+                        <p>No completed activities yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Overall Statistics -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="task-card">
+                <h3 class="section-title">
+                    <i class="fas fa-chart-pie me-2"></i>Overall Stats
+                </h3>
+                <div class="text-center">
+                    <div class="mb-3">
+                        <h2 class="text-primary mb-1">{{ completion_rate }}%</h2>
+                        <p class="text-muted mb-0">Completion Rate</p>
+                    </div>
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar bg-gradient" 
+                             style="width: {{ completion_rate }}%; background: linear-gradient(90deg, var(--primary-color), var(--success-color));"
+                             role="progressbar">
+                        </div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-6 border-end">
+                            <h4 class="mb-0">{{ total_assigned }}</h4>
+                            <small class="text-muted">Total Tasks</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="mb-0">{{ total_units }}</h4>
+                            <small class="text-muted">Units Assigned</small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Dark mode toggle
-        function toggleDarkMode() {
-            document.body.classList.toggle('dark-mode');
-            const icon = document.querySelector('.dark-mode-toggle i');
-            icon.classList.toggle('fa-moon');
-            icon.classList.toggle('fa-sun');
-        }
         
-        // Add loading animation to buttons
-        document.querySelectorAll('.btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                if (!this.disabled) {
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>' + this.textContent;
-                }
-            });
-        });
-        
-        // Animate cards on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-        
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.animation = 'fadeInUp 0.6s ease';
-                }
-            });
-        }, observerOptions);
-        
-        document.querySelectorAll('.card').forEach(card => {
-            observer.observe(card);
-        });
-        
-        // Add particle effect
-        function createParticle() {
-            const particle = document.createElement('div');
-            particle.style.cssText = `
-                position: fixed;
-                width: 4px;
-                height: 4px;
-                background: rgba(255,255,255,0.5);
-                border-radius: 50%;
-                pointer-events: none;
-                z-index: -1;
-                animation: float 3s linear infinite;
-            `;
-            
-            particle.style.left = Math.random() * 100 + 'vw';
-            particle.style.animationDelay = Math.random() * 3 + 's';
-            
-            document.body.appendChild(particle);
-            
-            setTimeout(() => {
-                particle.remove();
-            }, 3000);
-        }
-        
-        // Create particles periodically
-        setInterval(createParticle, 300);
-        
-        // Add CSS for particle animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes float {
-                0% {
-                    transform: translateY(100vh) rotate(0deg);
-                    opacity: 0;
-                }
-                10% {
-                    opacity: 1;
-                }
-                90% {
-                    opacity: 1;
-                }
-                100% {
-                    transform: translateY(-100px) rotate(360deg);
-                    opacity: 0;
-                }
-            }
-            
-            .dark-mode {
-                filter: invert(1) hue-rotate(180deg);
-            }
-            
-            .dark-mode img,
-            .dark-mode video {
-                filter: invert(1) hue-rotate(180deg);
-            }
-        `;
-        document.head.appendChild(style);
-    </script>
-</body>
-</html>
+        <div class="col-md-6">
+            <!-- Assigned Units -->
+            <div class="task-card">
+                <h3 class="section-title">
+                    <i class="fas fa-map-marked-alt me-2"></i>My Units
+                </h3>
+                {% if assigned_units %}
+                    <div class="d-flex flex-wrap">
+                        {% for unit in assigned_units|slice:":10" %}
+                        <span class="unit-badge" title="{{ unit.get_full_location }}">
+                            {{ unit.unit_name }}
+                        </span>
+                        {% endfor %}
+                        {% if total_units > 10 %}
+                        <span class="unit-badge" style="background: #6c757d;">
+                            +{{ total_units|add:"-10" }} more
+                        </span>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No units assigned yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

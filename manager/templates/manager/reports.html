@@ -1,0 +1,141 @@
+{% extends 'manager/base.html' %}
+{% load static %}
+
+{% block title %}Reports & Analytics - Manager Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-bar-chart-fill"></i> Reports & Analytics</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'manager:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Reports</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Overall Statistics -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card shadow text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Units</h6>
+                    <h2 class="text-primary">{{ total_units }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Active Units</h6>
+                    <h2 class="text-success">{{ active_units }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Inactive Units</h6>
+                    <h2 class="text-secondary">{{ inactive_units }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Faculty Statistics -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-bank"></i> Faculty Statistics</h5>
+        </div>
+        <div class="card-body">
+            {% if faculty_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Faculty Name</th>
+                                <th>Code</th>
+                                <th>Total Units</th>
+                                <th>Active Units</th>
+                                <th>Inactive Units</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for faculty in faculty_stats %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-building"></i> {{ faculty.faculty_name }}
+                                </td>
+                                <td><code>{{ faculty.faculty_code }}</code></td>
+                                <td><strong>{{ faculty.total_units }}</strong></td>
+                                <td><span class="badge bg-success">{{ faculty.active_units }}</span></td>
+                                <td><span class="badge bg-secondary">{{ faculty.total_units|add:"-"|add:faculty.active_units }}</span></td>
+                                <td>
+                                    {% if faculty.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted text-center py-4">No faculty data available.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Zone Statistics -->
+    <div class="card shadow">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Zone Statistics</h5>
+        </div>
+        <div class="card-body">
+            {% if zone_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Zone Name</th>
+                                <th>Code</th>
+                                <th>Total Sections</th>
+                                <th>Total Units</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for zone in zone_stats %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-building"></i> {{ zone.zone_name }}
+                                </td>
+                                <td><code>{{ zone.zone_code }}</code></td>
+                                <td><span class="badge bg-info">{{ zone.total_sections }}</span></td>
+                                <td><strong>{{ zone.total_units }}</strong></td>
+                                <td>
+                                    {% if zone.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted text-center py-4">No zone data available.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

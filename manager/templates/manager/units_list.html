@@ -58,6 +58,7 @@
                             <th>Section</th>
                             <th>Zone</th>
                             <th>Faculty</th>
+                            <th>Assigned Assistant</th>
                             <th>Status</th>
                             <th>Created</th>
                             <th>Actions</th>
@@ -83,6 +84,16 @@
                             <td>
                                 {% if unit.faculty %}
                                 {{ unit.faculty.faculty_name }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if unit.assigned_assistant %}
+                                <span class="badge bg-info">
+                                    <i class="bi bi-person"></i>
+                                    {{ unit.assigned_assistant.get_full_name|default:unit.assigned_assistant.username }}
+                                </span>
                                 {% else %}
                                 <span class="text-muted">-</span>
                                 {% endif %}

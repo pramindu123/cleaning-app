@@ -66,6 +66,9 @@ def cleaning_record_create(request):
         initial['activity'] = request.GET.get('activity')
     if 'scheduled_date' in request.GET:
         initial['scheduled_date'] = request.GET.get('scheduled_date')
+    else:
+        # Default to today's date
+        initial['scheduled_date'] = timezone.localdate()
     
     # If assistant, set assigned_to to themselves
     if request.user.is_assistant():
@@ -82,7 +85,7 @@ def cleaning_record_create(request):
                 unit = form.cleaned_data['unit']
                 activity = form.cleaned_data.get('activity')
                 assigned_to = form.cleaned_data['assigned_to']
-                status = form.cleaned_data['status']
+                status = 'PENDING'  # Default status for new records
                 notes = form.cleaned_data.get('notes', '')
 
                 # If assistant is creating, force assign to themselves
@@ -216,6 +219,7 @@ def cleaning_record_create(request):
                 record = form.save(commit=False)
                 if request.user.is_assistant():
                     record.assigned_to = request.user
+                record.status = 'PENDING'  # Set default status
                 record.save()
                 messages.success(request, f'Cleaning record created successfully for {record.unit.unit_name}.')
                 return redirect('cleaning:cleaning_record_detail', pk=record.pk)

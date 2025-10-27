@@ -2,9 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.db.models import Count, Q, Sum
+from django.forms import formset_factory
 from accounts.models import User
-from cleaning.models import Zone, Section, Faculty, Unit
-from .forms import ZoneForm, SectionForm, FacultyForm, UnitForm
+from cleaning.models import Zone, Section, Faculty, Unit, CleaningActivity
+from .forms import ZoneForm, SectionForm, FacultyForm, UnitForm, MonthlyScheduleActivityForm
 
 
 def is_manager(user):
@@ -474,4 +475,65 @@ def faculty_delete(request, faculty_id):
         'faculty': faculty,
     }
     return render(request, 'manager/faculty_confirm_delete.html', context)
+
+
+@login_required
+@user_passes_test(is_manager, login_url='login')
+def unit_schedule_monthly(request, unit_id):
+    """Create monthly cleaning schedule for a unit"""
+    unit = get_object_or_404(Unit, pk=unit_id)
+
+    # Create a formset for multiple activities
+    ActivityFormSet = formset_factory(
+        MonthlyScheduleActivityForm,
+        extra=1,  # Start with 1 row; users can add more dynamically
+        can_delete=False
+    )
+
+    if request.method == 'POST':
+        formset = ActivityFormSet(request.POST)
+
+        if formset.is_valid():
+            created_count = 0
+            skipped_count = 0
+
+            for form in formset:
+                if form.cleaned_data and form.cleaned_data.get('activity_name'):
+                    activity_name = form.cleaned_data['activity_name']
+
+                    # Check if activity already exists for this unit
+                    if CleaningActivity.objects.filter(unit=unit, activity_name__iexact=activity_name).exists():
+                        skipped_count += 1
+                        messages.warning(request, f'Activity "{activity_name}" already exists for this unit. Skipped.')
+                        continue
+
+                    # Create the activity
+                    activity = form.save(commit=False)
+                    activity.unit = unit
+                    activity.is_active = True
+                    activity.save()
+                    created_count += 1
+
+            if created_count > 0:
+                messages.success(request, f'{created_count} cleaning activity(ies) added to "{unit.unit_name}" successfully!')
+
+            if skipped_count > 0:
+                messages.info(request, f'{skipped_count} duplicate activity(ies) were skipped.')
+
+            if created_count == 0 and skipped_count == 0:
+                messages.warning(request, 'No activities were added. Please fill in at least one form.')
+
+            return redirect('manager:unit_detail', unit_id=unit.id)
+    else:
+        formset = ActivityFormSet()
+
+    # Get existing activities for reference
+    existing_activities = CleaningActivity.objects.filter(unit=unit).order_by('activity_name')
+
+    context = {
+        'unit': unit,
+        'formset': formset,
+        'existing_activities': existing_activities,
+    }
+    return render(request, 'manager/unit_schedule_monthly.html', context)
 

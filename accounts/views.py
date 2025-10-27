@@ -64,6 +64,10 @@ def dashboard_view(request):
     if request.user.role == 'MANAGER':
         return redirect('manager:dashboard')
     
+    # Redirect assistants to their dedicated dashboard
+    if request.user.role == 'ASSISTANT':
+        return redirect('assistant:dashboard')
+    
     context = {
         'user': request.user,
         'role': request.user.get_role_display(),

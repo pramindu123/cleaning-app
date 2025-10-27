@@ -1,0 +1,279 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Add Monthly Schedule - {{ unit.unit_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'manager:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'manager:units_list' %}">Units</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'manager:unit_detail' unit.id %}">{{ unit.unit_name }}</a></li>
+            <li class="breadcrumb-item active">Add Monthly Schedule</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-calendar-plus"></i> Add Monthly Cleaning Schedule
+                    </h4>
+                    <p class="mb-0 mt-2"><small>Unit: <strong>{{ unit.unit_name }}</strong> ({{ unit.get_full_location }})</small></p>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        <strong>Instructions:</strong> Add one activity or multiple activities for this unit. Start with a single row and click "Add another activity" to include more. Each activity needs a name and frequency.
+                    </div>
+
+                    <form method="post" id="scheduleForm">
+                        {% csrf_token %}
+                        {{ formset.management_form }}
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="activityTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 5%">#</th>
+                                        <th style="width: 20%">Activity Name <span class="text-danger">*</span></th>
+                                        <th style="width: 15%">Frequency <span class="text-danger">*</span></th>
+                                        <th style="width: 25%">Description</th>
+                                        <th style="width: 10%">Budget %</th>
+                                        <th style="width: 25%">Special Instructions</th>
+                                        <th style="width: 10%" class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for form in formset %}
+                                    <tr class="activity-row">
+                                        <td class="text-center align-middle">
+                                            <strong>{{ forloop.counter }}</strong>
+                                        </td>
+                                        <td>
+                                            {{ form.activity_name }}
+                                            {% if form.activity_name.errors %}
+                                                <div class="text-danger small">{{ form.activity_name.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.frequency }}
+                                            {% if form.frequency.errors %}
+                                                <div class="text-danger small">{{ form.frequency.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.description }}
+                                            {% if form.description.errors %}
+                                                <div class="text-danger small">{{ form.description.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.budget_percentage }}
+                                            {% if form.budget_percentage.errors %}
+                                                <div class="text-danger small">{{ form.budget_percentage.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.special_instructions }}
+                                            {% if form.special_instructions.errors %}
+                                                <div class="text-danger small">{{ form.special_instructions.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            <button type="button" class="btn btn-outline-danger btn-sm remove-row">
+                                                <i class="bi bi-x"></i> Remove
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Hidden empty form row template -->
+                        <template id="empty-form-template">
+                            <tr class="activity-row">
+                                <td class="text-center align-middle">
+                                    <strong></strong>
+                                </td>
+                                <td>
+                                    {{ formset.empty_form.activity_name }}
+                                </td>
+                                <td>
+                                    {{ formset.empty_form.frequency }}
+                                </td>
+                                <td>
+                                    {{ formset.empty_form.description }}
+                                </td>
+                                <td>
+                                    {{ formset.empty_form.budget_percentage }}
+                                </td>
+                                <td>
+                                    {{ formset.empty_form.special_instructions }}
+                                </td>
+                                <td class="text-center align-middle">
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-row">
+                                        <i class="bi bi-x"></i> Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="button" id="addRowBtn" class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle"></i> Add another activity
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Save Activities
+                            </button>
+                            <a href="{% url 'manager:unit_detail' unit.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar with existing activities -->
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-check"></i> Existing Activities
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if existing_activities %}
+                        <div class="alert alert-warning small">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Activities with the same name will be skipped automatically.
+                        </div>
+                        <ul class="list-group">
+                            {% for activity in existing_activities %}
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">{{ activity.activity_name }}</div>
+                                    <small class="text-muted">{{ activity.get_frequency_display }}</small>
+                                </div>
+                                <span class="badge bg-{% if activity.is_active %}success{% else %}secondary{% endif %} rounded-pill">
+                                    {% if activity.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle"></i>
+                            No activities have been added to this unit yet. Use the form to add your first activities.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Guide -->
+            <div class="card shadow mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-question-circle"></i> Frequency Guide</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        <li><strong>Twice Per Day:</strong> 2 times daily</li>
+                        <li><strong>Daily:</strong> Once per day</li>
+                        <li><strong>Every 2 Days:</strong> Once every 2 days</li>
+                        <li><strong>Weekly:</strong> Once per week</li>
+                        <li><strong>Every 2 Weeks:</strong> Once every 2 weeks</li>
+                        <li><strong>Monthly:</strong> Once per month</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .activity-row td input[type="text"],
+    .activity-row td textarea,
+    .activity-row td select,
+    .activity-row td input[type="number"] {
+        width: 100%;
+    }
+    
+    .activity-row td textarea {
+        resize: vertical;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+</style>
+
+<script>
+    // Dynamic formset handling: add rows and allow remove (hide) rows while keeping indices valid
+    document.addEventListener('DOMContentLoaded', function() {
+        const tableBody = document.querySelector('#activityTable tbody');
+        const addRowBtn = document.getElementById('addRowBtn');
+        const template = document.getElementById('empty-form-template');
+        const totalFormsInput = document.querySelector('input[name="form-TOTAL_FORMS"]');
+
+        function renumberVisibleRows() {
+            let counter = 1;
+            tableBody.querySelectorAll('tr.activity-row').forEach(tr => {
+                if (tr.classList.contains('d-none')) return;
+                const strong = tr.querySelector('td:first-child strong');
+                if (strong) strong.textContent = counter++;
+            });
+        }
+
+        function attachRowBehavior(tr) {
+            tr.querySelectorAll('input, select, textarea').forEach(input => {
+                input.addEventListener('focus', function() {
+                    tr.classList.add('table-active');
+                });
+                input.addEventListener('blur', function() {
+                    const hasValue = Array.from(tr.querySelectorAll('input, select, textarea')).some(el => el.value);
+                    if (!hasValue) tr.classList.remove('table-active');
+                });
+            });
+            const removeBtn = tr.querySelector('.remove-row');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    // Clear inputs and hide the row instead of changing TOTAL_FORMS
+                    tr.querySelectorAll('input, textarea').forEach(el => el.value = '');
+                    tr.querySelectorAll('select').forEach(sel => sel.selectedIndex = 0);
+                    tr.classList.add('d-none');
+                    renumberVisibleRows();
+                });
+            }
+        }
+
+        // Attach behavior to existing rows
+        tableBody.querySelectorAll('tr.activity-row').forEach(attachRowBehavior);
+        renumberVisibleRows();
+
+        function addRow() {
+            const formIdx = parseInt(totalFormsInput.value, 10);
+            const clone = document.importNode(template.content, true);
+            // Replace __prefix__ with formIdx in the new row's inputs
+            clone.querySelectorAll('[name], [id], label[for]').forEach(el => {
+                ['name', 'id', 'for'].forEach(attr => {
+                    if (el.hasAttribute && el.hasAttribute(attr)) {
+                        el.setAttribute(attr, el.getAttribute(attr).replace('__prefix__', formIdx));
+                    }
+                });
+            });
+            const row = clone.querySelector('tr.activity-row');
+            tableBody.appendChild(row);
+            totalFormsInput.value = formIdx + 1;
+            attachRowBehavior(row);
+            renumberVisibleRows();
+        }
+
+        if (addRowBtn) {
+            addRowBtn.addEventListener('click', addRow);
+        }
+    });
+</script>
+{% endblock %}

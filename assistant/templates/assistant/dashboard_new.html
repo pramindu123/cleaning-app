@@ -1,0 +1,536 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Assistant Dashboard - USJ Cleaning App{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #667eea;
+        --secondary-color: #764ba2;
+        --success-color: #1cc88a;
+        --warning-color: #f6c23e;
+        --danger-color: #e74a3b;
+        --info-color: #36b9cc;
+    }
+    
+    body {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        min-height: 100vh;
+    }
+    
+    .dashboard-header {
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stats-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 80px;
+        height: 80px;
+        opacity: 0.1;
+        font-size: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stats-card.pending { border-left-color: var(--warning-color); }
+    .stats-card.completed { border-left-color: var(--success-color); }
+    .stats-card.in-progress { border-left-color: var(--info-color); }
+    .stats-card.verified { border-left-color: var(--primary-color); }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 10px 0;
+    }
+    
+    .stats-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .stats-icon {
+        font-size: 2.5rem;
+        opacity: 0.2;
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .task-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .task-item {
+        background: #f8f9fc;
+        border-left: 4px solid;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .task-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .task-item.pending { border-left-color: var(--warning-color); }
+    .task-item.completed { border-left-color: var(--success-color); }
+    .task-item.in-progress { border-left-color: var(--info-color); }
+    .task-item.verified { border-left-color: var(--primary-color); }
+    
+    .badge-status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .badge-pending { background: #fff3cd; color: #856404; }
+    .badge-completed { background: #d4edda; color: #155724; }
+    .badge-in-progress { background: #d1ecf1; color: #0c5460; }
+    .badge-verified { background: #cfe2ff; color: #084298; }
+    
+    .progress-circle {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .quick-action-btn {
+        flex: 1;
+        min-width: 150px;
+        padding: 15px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        color: white;
+    }
+    
+    .quick-action-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: #2c3e50;
+        position: relative;
+        padding-bottom: 10px;
+    }
+    
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        border-radius: 2px;
+    }
+    
+    .unit-badge {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        display: inline-block;
+        margin: 5px;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        opacity: 0.3;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-tasks me-2"></i>
+                    Welcome, {{ user.get_full_name|default:user.username }}!
+                </h1>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-user-tag me-2"></i>{{ user.get_role_display }}
+                    <span class="ms-3"><i class="far fa-calendar me-2"></i>{% now "l, F d, Y" %}</span>
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="quick-actions">
+                    <a href="{% url 'cleaning:cleaning_record_list' %}" class="btn btn-primary quick-action-btn">
+                        <i class="fas fa-list me-2"></i>All Tasks
+                    </a>
+                    <a href="{% url 'cleaning:cleaning_record_create' %}" class="btn btn-success quick-action-btn">
+                        <i class="fas fa-plus me-2"></i>New Task
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card pending">
+                <div class="stats-label">Pending Tasks</div>
+                <div class="stats-number text-warning">{{ total_pending }}</div>
+                <small class="text-muted">Awaiting action</small>
+                <i class="fas fa-clock stats-icon text-warning"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card in-progress">
+                <div class="stats-label">In Progress</div>
+                <div class="stats-number text-info">{{ total_in_progress }}</div>
+                <small class="text-muted">Currently working</small>
+                <i class="fas fa-spinner stats-icon text-info"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card completed">
+                <div class="stats-label">Completed</div>
+                <div class="stats-number text-success">{{ total_completed }}</div>
+                <small class="text-muted">Successfully finished</small>
+                <i class="fas fa-check-circle stats-icon text-success"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card verified">
+                <div class="stats-label">Verified</div>
+                <div class="stats-number text-primary">{{ total_verified }}</div>
+                <small class="text-muted">Manager approved</small>
+                <i class="fas fa-certificate stats-icon text-primary"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Overview -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="task-card">
+                <h3 class="section-title">
+                    <i class="fas fa-calendar-day me-2"></i>Today's Tasks
+                </h3>
+                
+                {% if todays_tasks %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-primary">Total: {{ today_total }}</span>
+                                <span class="badge bg-success ms-2">Completed: {{ today_completed }}</span>
+                                <span class="badge bg-warning ms-2">Pending: {{ today_pending }}</span>
+                            </div>
+                            <div>
+                                {% if today_total > 0 %}
+                                    <small class="text-muted">{{ today_completed }}/{{ today_total }} completed</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if today_total > 0 %}
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {% widthratio today_completed today_total 100 %}%"
+                                 aria-valuenow="{{ today_completed }}" aria-valuemin="0" aria-valuemax="{{ today_total }}">
+                                {% widthratio today_completed today_total 100 %}%
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% for task in todays_tasks %}
+                    <div class="task-item {{ task.status|lower }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h5 class="mb-2">
+                                    <i class="fas fa-building me-2"></i>{{ task.unit.unit_name }}
+                                </h5>
+                                <p class="mb-2">
+                                    {% if task.activity %}
+                                        <i class="fas fa-tasks me-2"></i>{{ task.activity.activity_name }}
+                                    {% else %}
+                                        <i class="fas fa-tasks me-2"></i>General Cleaning
+                                    {% endif %}
+                                </p>
+                                <small class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>{{ task.unit.get_full_location }}
+                                    {% if task.scheduled_time %}
+                                        <span class="ms-3"><i class="far fa-clock me-1"></i>{{ task.scheduled_time|time:"g:i A" }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge-status badge-{{ task.status|lower }}">{{ task.get_status_display }}</span>
+                                <div class="mt-2">
+                                    <a href="{% url 'cleaning:cleaning_record_detail' task.pk %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
+                                    {% if task.status == 'PENDING' or task.status == 'IN_PROGRESS' %}
+                                    <a href="{% url 'cleaning:cleaning_record_update' task.pk %}" 
+                                       class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-edit me-1"></i>Update
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-check"></i>
+                        <p>No tasks scheduled for today</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Overall Statistics -->
+            <div class="task-card mb-3">
+                <h3 class="section-title">
+                    <i class="fas fa-chart-pie me-2"></i>Overall Stats
+                </h3>
+                <div class="text-center">
+                    <div class="mb-3">
+                        <h2 class="text-primary mb-1">{{ completion_rate }}%</h2>
+                        <p class="text-muted mb-0">Completion Rate</p>
+                    </div>
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar bg-gradient" 
+                             style="width: {{ completion_rate }}%; background: linear-gradient(90deg, var(--primary-color), var(--success-color));"
+                             role="progressbar">
+                        </div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-6 border-end">
+                            <h4 class="mb-0">{{ total_assigned }}</h4>
+                            <small class="text-muted">Total Tasks</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="mb-0">{{ total_units }}</h4>
+                            <small class="text-muted">Units Assigned</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Assigned Units -->
+            <div class="task-card">
+                <h3 class="section-title">
+                    <i class="fas fa-map-marked-alt me-2"></i>My Units
+                </h3>
+                {% if assigned_units %}
+                    <div class="d-flex flex-wrap">
+                        {% for unit in assigned_units|slice:":10" %}
+                        <span class="unit-badge" title="{{ unit.get_full_location }}">
+                            {{ unit.unit_name }}
+                        </span>
+                        {% endfor %}
+                        {% if total_units > 10 %}
+                        <span class="unit-badge" style="background: #6c757d;">
+                            +{{ total_units|add:"-10" }} more
+                        </span>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No units assigned yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming and Pending Tasks -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="task-card">
+                <h3 class="section-title">
+                    <i class="fas fa-calendar-week me-2"></i>Upcoming Tasks (Next 7 Days)
+                </h3>
+                {% if upcoming_tasks %}
+                    {% for task in upcoming_tasks %}
+                    <div class="task-item {{ task.status|lower }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ task.unit.unit_name }}</h6>
+                                <small class="text-muted d-block">
+                                    {% if task.activity %}{{ task.activity.activity_name }}{% else %}General Cleaning{% endif %}
+                                </small>
+                                <small class="text-muted">
+                                    <i class="far fa-calendar me-1"></i>{{ task.scheduled_date|date:"M d, Y" }}
+                                    {% if task.scheduled_time %}
+                                        <span class="ms-2"><i class="far fa-clock me-1"></i>{{ task.scheduled_time|time:"g:i A" }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <span class="badge-status badge-{{ task.status|lower }}">{{ task.get_status_display }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="far fa-calendar-times"></i>
+                        <p>No upcoming tasks</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="task-card">
+                <h3 class="section-title">
+                    <i class="fas fa-exclamation-circle me-2"></i>Pending Tasks
+                </h3>
+                {% if pending_tasks %}
+                    {% for task in pending_tasks %}
+                    <div class="task-item pending">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ task.unit.unit_name }}</h6>
+                                <small class="text-muted d-block">
+                                    {% if task.activity %}{{ task.activity.activity_name }}{% else %}General Cleaning{% endif %}
+                                </small>
+                                <small class="text-danger">
+                                    <i class="far fa-calendar me-1"></i>Due: {{ task.scheduled_date|date:"M d, Y" }}
+                                </small>
+                            </div>
+                            <a href="{% url 'cleaning:cleaning_record_update' task.pk %}" 
+                               class="btn btn-sm btn-warning">
+                                <i class="fas fa-play me-1"></i>Start
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-check-double"></i>
+                        <p>All caught up! No pending tasks</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Completed Tasks -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="task-card">
+                <h3 class="section-title">
+                    <i class="fas fa-history me-2"></i>Recently Completed
+                </h3>
+                {% if completed_tasks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Unit</th>
+                                    <th>Activity</th>
+                                    <th>Completed Date</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in completed_tasks %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ task.unit.unit_name }}</strong><br>
+                                        <small class="text-muted">{{ task.unit.zone.zone_name }}</small>
+                                    </td>
+                                    <td>
+                                        {% if task.activity %}
+                                            {{ task.activity.activity_name }}
+                                        {% else %}
+                                            General Cleaning
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ task.completed_date|date:"M d, Y" }}<br>
+                                        <small class="text-muted">{{ task.completed_date|time:"g:i A" }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge-status badge-{{ task.status|lower }}">
+                                            {{ task.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'cleaning:cleaning_record_detail' task.pk %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye me-1"></i>View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="far fa-list-alt"></i>
+                        <p>No completed tasks yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

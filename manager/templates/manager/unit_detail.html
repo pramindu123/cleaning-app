@@ -93,6 +93,19 @@
                                     </td>
                                 </tr>
                                 <tr>
+                                    <th>Assigned Assistant:</th>
+                                    <td>
+                                        {% if unit.assigned_assistant %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-person"></i>
+                                            {{ unit.assigned_assistant.get_full_name|default:unit.assigned_assistant.username }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">No assistant assigned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
                                     <th>Full Location:</th>
                                     <td>{{ unit.get_full_location }}</td>
                                 </tr>
@@ -115,6 +128,9 @@
                     </table>
 
                     <div class="mt-4 d-flex gap-2">
+                            <a href="{% url 'manager:unit_schedule_monthly' unit.id %}" class="btn btn-primary">
+                                <i class="bi bi-calendar-plus"></i> Add Monthly Schedule
+                            </a>
                         <a href="{% url 'manager:unit_update' unit.id %}" class="btn btn-warning">
                             <i class="bi bi-pencil"></i> Edit Unit
                         </a>

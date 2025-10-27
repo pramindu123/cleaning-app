@@ -10,7 +10,7 @@ class CleaningRecordForm(forms.ModelForm):
     
     class Meta:
         model = CleaningRecord
-        fields = ['unit', 'activity', 'assigned_to', 'scheduled_date', 'status', 'notes']
+        fields = ['unit', 'activity', 'assigned_to', 'scheduled_date', 'notes']
         widgets = {
             'unit': forms.Select(attrs={
                 'class': 'form-select',
@@ -30,9 +30,6 @@ class CleaningRecordForm(forms.ModelForm):
                 'class': 'form-control',
                 'type': 'month',
                 'required': True
-            }),
-            'status': forms.Select(attrs={
-                'class': 'form-select'
             }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',

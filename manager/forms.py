@@ -1,5 +1,5 @@
 from django import forms
-from cleaning.models import Zone, Section, Faculty, Unit
+from cleaning.models import Zone, Section, Faculty, Unit, CleaningActivity
 
 
 class ZoneForm(forms.ModelForm):
@@ -77,6 +77,7 @@ class FacultyForm(forms.ModelForm):
         
         return cleaned_data
     
+    
     def save(self, commit=True):
         existing_faculty = self.cleaned_data.get('existing_faculty')
         
@@ -91,24 +92,33 @@ class FacultyForm(forms.ModelForm):
 class UnitForm(forms.ModelForm):
     class Meta:
         model = Unit
-        fields = ['unit_name', 'zone', 'section', 'faculty', 'description', 'is_active']
+        fields = ['unit_name', 'zone', 'section', 'faculty', 'assigned_assistant', 'description', 'is_active']
         widgets = {
             'unit_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter unit name'}),
             'zone': forms.Select(attrs={'class': 'form-select'}),
             'section': forms.Select(attrs={'class': 'form-select'}),
             'faculty': forms.Select(attrs={'class': 'form-select'}),
+            'assigned_assistant': forms.Select(attrs={'class': 'form-select'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Enter description (optional)'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from accounts.models import User
+        
         # Make zone required, but section and faculty optional
         self.fields['zone'].required = True
         self.fields['section'].required = False
         self.fields['faculty'].required = False
+        self.fields['assigned_assistant'].required = False
         self.fields['section'].empty_label = "-- No Section (Optional) --"
         self.fields['faculty'].empty_label = "-- No Faculty (Optional) --"
+        self.fields['assigned_assistant'].empty_label = "-- No Assistant Assigned (Optional) --"
+        
+        # Filter assigned_assistant to show only users with ASSISTANT role
+        self.fields['assigned_assistant'].queryset = User.objects.filter(role='ASSISTANT').order_by('username')
+        self.fields['assigned_assistant'].label_from_instance = lambda obj: f"{obj.get_full_name() or obj.username} ({obj.username})"
     
     def clean(self):
         cleaned_data = super().clean()
@@ -125,3 +135,53 @@ class UnitForm(forms.ModelForm):
             raise forms.ValidationError(f'Section "{section.section_name}" does not belong to the selected zone "{zone.zone_name}".')
         
         return cleaned_data
+
+
+class MonthlyScheduleActivityForm(forms.ModelForm):
+    """Form for creating cleaning activities as part of monthly schedule"""
+    class Meta:
+        model = CleaningActivity
+        fields = ['activity_name', 'description', 'frequency', 'budget_percentage', 'special_instructions']
+        widgets = {
+            'activity_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., Sweep floor, Mop floor, Clean windows',
+                'required': True
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Brief description of the activity'
+            }),
+            'frequency': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
+            }),
+            'budget_percentage': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': '0-100',
+                'min': '0',
+                'max': '100',
+                'step': '0.01'
+            }),
+            'special_instructions': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Any special instructions or requirements'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['activity_name'].required = True
+        self.fields['frequency'].required = True
+        self.fields['description'].required = False
+        self.fields['budget_percentage'].required = False
+        self.fields['special_instructions'].required = False
+
+        # Set labels
+        self.fields['activity_name'].label = "Activity Name"
+        self.fields['description'].label = "Description"
+        self.fields['frequency'].label = "Frequency"
+        self.fields['budget_percentage'].label = "Budget Percentage"
+        self.fields['special_instructions'].label = "Special Instructions"

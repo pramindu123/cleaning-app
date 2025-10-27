@@ -92,13 +92,13 @@ class FacultyAdmin(admin.ModelAdmin):
 @admin.register(Unit)
 class UnitAdmin(admin.ModelAdmin):
     list_display = [
-        'unit_name', 'zone', 'section', 'faculty', 'is_active', 'created_at'
+        'unit_name', 'zone', 'section', 'faculty', 'assigned_assistant', 'is_active', 'created_at'
     ]
-    search_fields = ['unit_name', 'description', 'zone__zone_name', 'section__section_name', 'faculty__faculty_name']
+    search_fields = ['unit_name', 'description', 'zone__zone_name', 'section__section_name', 'faculty__faculty_name', 'assigned_assistant__username', 'assigned_assistant__first_name', 'assigned_assistant__last_name']
     list_filter = [
-        'is_active', 'zone', 'section', 'faculty', 'created_at'
+        'is_active', 'zone', 'section', 'faculty', 'assigned_assistant', 'created_at'
     ]
-    list_select_related = ['zone', 'section', 'section__zone', 'faculty']
+    list_select_related = ['zone', 'section', 'section__zone', 'faculty', 'assigned_assistant']
     readonly_fields = ['id', 'created_at', 'updated_at', 'get_full_location']
     list_editable = ['is_active']
     
@@ -110,6 +110,10 @@ class UnitAdmin(admin.ModelAdmin):
         ('Administration', {
             'fields': ('faculty',),
             'description': 'Administrative responsibility (optional)'
+        }),
+        ('Assignment', {
+            'fields': ('assigned_assistant',),
+            'description': 'Assistant responsible for cleaning this unit (optional)'
         }),
         ('Basic Information', {
             'fields': ('id', 'unit_name', 'description', 'is_active')

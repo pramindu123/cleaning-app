@@ -165,6 +165,17 @@ class Unit(models.Model):
         help_text="The faculty responsible for this unit (optional)"
     )
     
+    # Assistant assignment
+    assigned_assistant = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_units',
+        limit_choices_to={'role': 'ASSISTANT'},
+        help_text="The assistant assigned to clean this unit (optional)"
+    )
+    
     is_active = models.BooleanField(
         default=True,
         help_text="Whether this unit is currently in use or under maintenance"

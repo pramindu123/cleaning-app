@@ -72,6 +72,20 @@
                             <small class="form-text text-muted">Select the faculty responsible for this unit (optional)</small>
                         </div>
 
+                        <!-- Assigned Assistant -->
+                        <div class="mb-3">
+                            <label for="{{ form.assigned_assistant.id_for_label }}" class="form-label">
+                                Assigned Assistant <span class="text-muted">(Optional)</span>
+                            </label>
+                            {{ form.assigned_assistant }}
+                            {% if form.assigned_assistant.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.assigned_assistant.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Select the assistant responsible for cleaning this unit (optional)</small>
+                        </div>
+
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle"></i>
                             <strong>Note:</strong> Unit must have at least a Section or Faculty (or both).

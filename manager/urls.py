@@ -33,6 +33,7 @@ urlpatterns = [
     path('units/<int:unit_id>/', views.unit_detail, name='unit_detail'),
     path('units/<int:unit_id>/edit/', views.unit_update, name='unit_update'),
     path('units/<int:unit_id>/delete/', views.unit_delete, name='unit_delete'),
+        path('units/<int:unit_id>/schedule/', views.unit_schedule_monthly, name='unit_schedule_monthly'),
     
     # Assistants
     path('assistants/', views.assistants_list, name='assistants_list'),
