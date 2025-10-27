@@ -1,0 +1,468 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Cleaning Record{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title mb-3">{{ action }} Cleaning Record</h3>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <input type="hidden" name="selected_days" id="id_selected_days" value="">
+
+                        <div class="mb-3">
+                            <label for="{{ form.unit.id_for_label }}" class="form-label">{{ form.unit.label }} *</label>
+                            {{ form.unit }}
+                            {% if form.unit.help_text %}
+                            <div class="form-text">{{ form.unit.help_text }}</div>
+                            {% endif %}
+                            {% if form.unit.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.unit.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.activity.id_for_label }}" class="form-label">{{ form.activity.label }}</label>
+                            {{ form.activity }}
+                            {% if form.activity.help_text %}
+                            <div class="form-text">{{ form.activity.help_text }}</div>
+                            {% endif %}
+                            {% if form.activity.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.activity.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if not is_assistant %}
+                        <div class="mb-3">
+                            <label for="{{ form.assigned_to.id_for_label }}" class="form-label">{{ form.assigned_to.label }} *</label>
+                            {{ form.assigned_to }}
+                            {% if form.assigned_to.help_text %}
+                            <div class="form-text">{{ form.assigned_to.help_text }}</div>
+                            {% endif %}
+                            {% if form.assigned_to.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.assigned_to.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <!-- Hidden field for assistant - assigned to themselves -->
+                        {{ form.assigned_to }}
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle"></i> This record will be assigned to you ({{ user.get_full_name|default:user.username }})
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.scheduled_date.id_for_label }}" class="form-label">{{ form.scheduled_date.label }} *</label>
+                                {{ form.scheduled_date }}
+                                {% if form.scheduled_date.help_text %}
+                                <div class="form-text">{{ form.scheduled_date.help_text }}</div>
+                                {% endif %}
+                                {% if form.scheduled_date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.scheduled_date.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }} *</label>
+                                {{ form.status }}
+                                {% if form.status.help_text %}
+                                <div class="form-text">{{ form.status.help_text }}</div>
+                                {% endif %}
+                                {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.status.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
+                            {{ form.notes }}
+                            {% if form.notes.help_text %}
+                            <div class="form-text">{{ form.notes.help_text }}</div>
+                            {% endif %}
+                            {% if form.notes.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.notes.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'cleaning:cleaning_record_list' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">{{ action }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const unitSelect = document.getElementById('id_unit');
+    const activitySelect = document.getElementById('id_activity');
+        const assignedSelect = document.getElementById('id_assigned_to');
+
+        // Prepare calendar container; attach below notes only after activity selected
+        const calWrapper = document.createElement('div');
+        calWrapper.className = 'card mt-4';
+        calWrapper.innerHTML = `
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Activity Calendar</span>
+                <small class="text-muted">Select days, then press Save</small>
+            </div>
+            <div id="activity-calendar-container" class="card-body p-2"></div>
+            <div class="card-footer d-flex gap-2 justify-content-end">
+                <button type="button" id="btn-clear-selected-days" class="btn btn-outline-secondary btn-sm" disabled>Clear Selection</button>
+                <button type="button" id="btn-save-selected-days" class="btn btn-success btn-sm" disabled>Save Selected Days</button>
+            </div>
+        `;
+        const notesField = document.getElementById('id_notes');
+        const notesGroup = notesField ? notesField.closest('.mb-3') : null;
+        let calAttached = false;
+        function attachCalendar() {
+            if (!notesGroup || calAttached) return;
+            notesGroup.insertAdjacentElement('afterend', calWrapper);
+            calAttached = true;
+        }
+        function detachCalendar() {
+            if (calAttached && calWrapper.parentElement) {
+                calWrapper.parentElement.removeChild(calWrapper);
+            }
+            calAttached = false;
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+    const calContainer = calWrapper.querySelector('#activity-calendar-container');
+    const saveBtn = calWrapper.querySelector('#btn-save-selected-days');
+    const clearBtn = calWrapper.querySelector('#btn-clear-selected-days');
+        const monthInput = document.getElementById('id_scheduled_date');
+        const selectedDates = new Set();
+        const selectedHidden = document.getElementById('id_selected_days');
+        let currentFrequency = null;
+        let anchorDateStr = null;
+        const headerSmall = calWrapper.querySelector('.card-header small');
+        function syncHidden() {
+            if (selectedHidden) {
+                selectedHidden.value = Array.from(selectedDates).sort().join(',');
+            }
+        }
+    let calWired = false;
+
+        function updateSelectionButtonsState() {
+            const hasSelection = selectedDates.size > 0;
+            if (saveBtn) saveBtn.disabled = !hasSelection;
+            if (clearBtn) clearBtn.disabled = !hasSelection;
+        }
+        function getMonthFromInput() {
+            if (!monthInput || !monthInput.value) {
+                const now = new Date();
+                return { y: now.getFullYear(), m: now.getMonth() + 1 };
+            }
+            // Value like 'YYYY-MM' from <input type="month">
+            const parts = monthInput.value.split('-');
+            if (parts.length >= 2) {
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                if (!Number.isNaN(y) && !Number.isNaN(m)) return { y, m };
+            }
+            const now = new Date();
+            return { y: now.getFullYear(), m: now.getMonth() + 1 };
+        }
+        let { y: calYear, m: calMonth } = getMonthFromInput();
+
+        function wireCalendarInteractions(activityId) {
+            if (!calContainer || calWired) return;
+            calWired = true;
+            calContainer.addEventListener('click', function(ev) {
+                const btn = ev.target.closest('.js-complete-day');
+                if (btn && activityId) {
+                    // Toggle selection without submitting immediately
+                    ev.preventDefault();
+                    const date = btn.getAttribute('data-date');
+                    // For BIWEEKLY frequency: from a start date, only every 14 days
+                    if (!selectedDates.has(date) && currentFrequency === 'BIWEEKLY') {
+                        // Determine anchor: server-provided anchorDateStr, else earliest currently selected date, else allow this date as start
+                        let sessionAnchor = anchorDateStr;
+                        if (!sessionAnchor && selectedDates.size > 0) {
+                            sessionAnchor = Array.from(selectedDates).sort()[0];
+                        }
+                        if (sessionAnchor) {
+                            const parseYMD = (s) => { const [Y, M, D] = s.split('-').map(n => parseInt(n, 10)); return { Y, M, D }; };
+                            const a = parseYMD(sessionAnchor);
+                            const d = parseYMD(date);
+                            if (!isNaN(a.Y) && !isNaN(d.Y)) {
+                                const utcA = Date.UTC(a.Y, a.M - 1, a.D);
+                                const utcD = Date.UTC(d.Y, d.M - 1, d.D);
+                                const days = Math.round((utcD - utcA) / 86400000);
+                                if (days % 14 !== 0) {
+                                    if (headerSmall) {
+                                        const original = headerSmall.textContent;
+                                        headerSmall.textContent = `Select every 14 days from start date ${sessionAnchor}`;
+                                        headerSmall.classList.add('text-danger');
+                                        setTimeout(() => { headerSmall.textContent = original; headerSmall.classList.remove('text-danger'); }, 1800);
+                                    }
+                                    return; // block selection not aligned to 14-day cadence
+                                }
+                            }
+                        }
+                    }
+                    // For EVERY_2_DAYS frequency: from a start date, only every 2 days
+                    if (!selectedDates.has(date) && currentFrequency === 'EVERY_2_DAYS') {
+                        let sessionAnchor2 = anchorDateStr;
+                        if (!sessionAnchor2 && selectedDates.size > 0) {
+                            sessionAnchor2 = Array.from(selectedDates).sort()[0];
+                        }
+                        if (sessionAnchor2) {
+                            const parseYMD = (s) => { const [Y, M, D] = s.split('-').map(n => parseInt(n, 10)); return { Y, M, D }; };
+                            const a2 = parseYMD(sessionAnchor2);
+                            const d2 = parseYMD(date);
+                            if (!isNaN(a2.Y) && !isNaN(d2.Y)) {
+                                const utcA2 = Date.UTC(a2.Y, a2.M - 1, a2.D);
+                                const utcD2 = Date.UTC(d2.Y, d2.M - 1, d2.D);
+                                const days2 = Math.round((utcD2 - utcA2) / 86400000);
+                                if (days2 % 2 !== 0) {
+                                    if (headerSmall) {
+                                        const original = headerSmall.textContent;
+                                        headerSmall.textContent = `Select every 2 days from start date ${sessionAnchor2}`;
+                                        headerSmall.classList.add('text-danger');
+                                        setTimeout(() => { headerSmall.textContent = original; headerSmall.classList.remove('text-danger'); }, 1800);
+                                    }
+                                    return; // block non-aligned selection
+                                }
+                            }
+                        }
+                    }
+                    // For MONTHLY frequency, allow only one selected day in the month
+                    if (!selectedDates.has(date) && currentFrequency === 'MONTHLY') {
+                        const newMonth = date.slice(0, 7); // YYYY-MM
+                        let conflict = false;
+                        for (const s of selectedDates) {
+                            if (s.slice(0, 7) === newMonth) { conflict = true; break; }
+                        }
+                        if (conflict) {
+                            if (headerSmall) {
+                                const original = headerSmall.textContent;
+                                headerSmall.textContent = 'Only one day per month for monthly activities';
+                                headerSmall.classList.add('text-danger');
+                                setTimeout(() => { headerSmall.textContent = original; headerSmall.classList.remove('text-danger'); }, 1500);
+                            }
+                            return; // block selecting another day in same month
+                        }
+                    }
+                    // For WEEKLY frequency, allow only one day per Mon-Sun week
+                    if (!selectedDates.has(date) && currentFrequency === 'WEEKLY') {
+                        const weekKey = (ds) => {
+                            const [Y, M, D] = ds.split('-').map(n => parseInt(n, 10));
+                            const d2 = new Date(Y, M - 1, D);
+                            const day = d2.getDay(); // 0 Sun .. 6 Sat
+                            const offset = (day === 0) ? -6 : (1 - day); // shift to Monday start
+                            d2.setDate(d2.getDate() + offset);
+                            const y = d2.getFullYear();
+                            const m = String(d2.getMonth() + 1).padStart(2, '0');
+                            const dd = String(d2.getDate()).padStart(2, '0');
+                            return `${y}-${m}-${dd}`;
+                        };
+                        const newWeek = weekKey(date);
+                        let conflict = false;
+                        for (const s of selectedDates) {
+                            if (weekKey(s) === newWeek) { conflict = true; break; }
+                        }
+                        if (conflict) {
+                            if (headerSmall) {
+                                const original = headerSmall.textContent;
+                                headerSmall.textContent = 'Only one day per Mon–Sun week for weekly activities';
+                                headerSmall.classList.add('text-danger');
+                                setTimeout(() => { headerSmall.textContent = original; headerSmall.classList.remove('text-danger'); }, 1500);
+                            }
+                            return; // block selection
+                        }
+                    }
+                    if (selectedDates.has(date)) {
+                        selectedDates.delete(date);
+                        // revert visual state
+                        btn.classList.remove('btn-success', 'active');
+                        btn.classList.add('btn-outline-success');
+                        btn.textContent = 'Mark Completed';
+                        btn.removeAttribute('data-selected');
+                    } else {
+                        selectedDates.add(date);
+                        // indicate selection visually
+                        btn.classList.remove('btn-outline-success');
+                        btn.classList.add('btn-success', 'active');
+                        btn.textContent = 'Selected';
+                        btn.setAttribute('data-selected', '1');
+                    }
+                    updateSelectionButtonsState();
+                    syncHidden();
+                }
+
+                const navPrev = ev.target.closest('.js-cal-prev');
+                const navNext = ev.target.closest('.js-cal-next');
+                if ((navPrev || navNext) && activityId) {
+                    const d = new Date(calYear, calMonth - 1, 1);
+                    if (navPrev) {
+                        d.setMonth(d.getMonth() - 1);
+                    } else {
+                        d.setMonth(d.getMonth() + 1);
+                    }
+                    calYear = d.getFullYear();
+                    calMonth = d.getMonth() + 1;
+                    loadCalendar(activityId, calYear, calMonth);
+                }
+            });
+    }
+
+        function loadCalendar(activityId, year, month) {
+            if (!activityId) {
+                calContainer.innerHTML = '';
+                return;
+            }
+            // lock=1 hides nav so only the selected Scheduled Month is actionable
+            fetch(`/cleaning/activities/${activityId}/calendar/partial/?year=${year}&month=${month}&lock=1`)
+                .then(r => r.text())
+                .then(html => {
+                    calContainer.innerHTML = html;
+                    // Read frequency and anchor from embedded meta element in the partial
+                    const meta = calContainer.querySelector('.js-cal-meta');
+                    currentFrequency = meta ? meta.getAttribute('data-frequency') : null;
+                    anchorDateStr = meta ? meta.getAttribute('data-anchor') : null;
+                })
+                .catch(err => {
+                    console.error('Failed to load calendar partial', err);
+                    calContainer.innerHTML = '<div class="text-danger">Failed to load calendar.</div>';
+                });
+        }
+
+    if (unitSelect && activitySelect) {
+        unitSelect.addEventListener('change', function() {
+            const unitId = this.value;
+
+            if (!unitId) {
+                // Clear activities if no unit selected
+                activitySelect.innerHTML = '<option value="">-- No specific activity (General cleaning) --</option>';
+                return;
+            }
+
+            // Fetch activities for the selected unit
+            fetch(`/cleaning/api/activities/unit/${unitId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    // Clear existing options
+                    activitySelect.innerHTML = '<option value="">-- No specific activity (General cleaning) --</option>';
+
+                    // Add new options
+                    data.activities.forEach(activity => {
+                        const option = document.createElement('option');
+                        option.value = activity.id;
+                        option.textContent = `${activity.activity_name} (${activity.frequency})`;
+                        activitySelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching activities:', error);
+                });
+        });
+
+                activitySelect.addEventListener('change', function() {
+                    const activityId = this.value;
+                    // Reset selection when activity changes
+                    selectedDates.clear();
+                    updateSelectionButtonsState();
+                    syncHidden();
+                    if (activityId) {
+                        attachCalendar();
+                    } else {
+                        detachCalendar();
+                    }
+                    ({ y: calYear, m: calMonth } = getMonthFromInput());
+                    loadCalendar(activityId, calYear, calMonth);
+                    // Wire interactions once on first render
+                    wireCalendarInteractions(activityId);
+                });
+
+                if (monthInput) {
+                    monthInput.addEventListener('change', function() {
+                        const activityId = activitySelect.value;
+                        if (!activityId) return;
+                        // Reset selection when month changes
+                        selectedDates.clear();
+                        updateSelectionButtonsState();
+                        syncHidden();
+                        ({ y: calYear, m: calMonth } = getMonthFromInput());
+                        loadCalendar(activityId, calYear, calMonth);
+                    });
+                }
+
+                // If activity already has a value (edit form), load calendar initially
+                if (activitySelect.value) {
+                    attachCalendar();
+                    ({ y: calYear, m: calMonth } = getMonthFromInput());
+                    loadCalendar(activitySelect.value, calYear, calMonth);
+                    wireCalendarInteractions(activitySelect.value);
+                } else {
+                    detachCalendar();
+                }
+
+                // Handle Save Selected Days
+                if (saveBtn) {
+                    // Save button now only stores selection to hidden input; no network requests
+                    saveBtn.addEventListener('click', function() {
+                        if (selectedDates.size === 0) return;
+                        syncHidden();
+                        // Provide a brief visual acknowledgement
+                        const original = saveBtn.textContent;
+                        saveBtn.textContent = 'Selection Saved';
+                        saveBtn.disabled = true;
+                        setTimeout(() => { saveBtn.textContent = original; saveBtn.disabled = false; }, 1200);
+                    });
+                }
+
+                // Handle Clear Selection
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', function() {
+                        // Clear tracked dates
+                        selectedDates.clear();
+                        updateSelectionButtonsState();
+                        // Reset buttons visually within the calendar
+                        calContainer.querySelectorAll('.js-complete-day[data-selected="1"]').forEach(btn => {
+                            btn.classList.remove('btn-success', 'active');
+                            btn.classList.add('btn-outline-success');
+                            btn.textContent = 'Mark Completed';
+                            btn.removeAttribute('data-selected');
+                        });
+                        syncHidden();
+                    });
+                }
+    }
+});
+</script>
+{% endblock %}

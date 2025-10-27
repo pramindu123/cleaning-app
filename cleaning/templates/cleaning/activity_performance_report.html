@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Activity Performance Report{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Activity Performance Report</h2>
+        <div>
+            <a href="{% url 'cleaning:faculty_list_report' %}" class="btn btn-success me-2">
+                <i class="bi bi-building"></i> Faculty Reports
+            </a>
+            <a href="{% url 'cleaning:cleaning_record_list' %}" class="btn btn-outline-secondary">Back to Records</a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Select Month and Unit</h5>
+            <form method="get" action="">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="month_select" class="form-label">Month</label>
+                        <select name="month_year" id="month_select" class="form-select" onchange="this.form.submit()">
+                            {% for m in months %}
+                            <option value="{{ m.year }}-{{ m.month }}" 
+                                {% if m.year == selected_year and m.month == selected_month %}selected{% endif %}>
+                                {{ m.display }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label for="unit" class="form-label">Unit (Optional)</label>
+                        <select name="unit" id="unit" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Units</option>
+                            {% for unit in units %}
+                            <option value="{{ unit.id }}" {% if selected_unit == unit.id|stringformat:"s" %}selected{% endif %}>
+                                {{ unit.get_full_location }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">Apply Filter</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Performance Table -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Performance for {{ selected_month_display }}</h5>
+        </div>
+        <div class="card-body">
+            {% if activity_stats %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 15%">Unit</th>
+                            <th style="width: 15%">Activity</th>
+                            <th style="width: 10%">Frequency</th>
+                            <th style="width: 10%" class="text-center">Expected</th>
+                            <th style="width: 10%" class="text-center">Actual</th>
+                            <th style="width: 12%" class="text-center">Actual %</th>
+                            <th style="width: 12%" class="text-center">Budgeted %</th>
+                            <th style="width: 16%" class="text-center">Variance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in activity_stats %}
+                        <tr>
+                            <td>
+                                <small class="text-muted">{{ stat.unit.get_full_location }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'cleaning:cleaning_activity_detail' stat.activity.pk %}">
+                                    {{ stat.activity.activity_name }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ stat.frequency }}</span>
+                            </td>
+                            <td class="text-center">
+                                <strong>{{ stat.expected_completions }}</strong>
+                            </td>
+                            <td class="text-center">
+                                <strong>{{ stat.actual_completions }}</strong>
+                            </td>
+                            <td class="text-center">
+                                {% if stat.actual_percentage >= 100 %}
+                                <span class="badge bg-success fs-6">{{ stat.actual_percentage }}%</span>
+                                {% elif stat.actual_percentage >= 75 %}
+                                <span class="badge bg-info fs-6">{{ stat.actual_percentage }}%</span>
+                                {% elif stat.actual_percentage >= 50 %}
+                                <span class="badge bg-warning fs-6">{{ stat.actual_percentage }}%</span>
+                                {% else %}
+                                <span class="badge bg-danger fs-6">{{ stat.actual_percentage }}%</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary fs-6">{{ stat.budgeted_percentage }}%</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="{{ stat.variance_class }} fw-bold fs-6">
+                                    {% if stat.variance >= 0 %}+{% endif %}{{ stat.variance }}%
+                                </span>
+                                {% if stat.variance >= 0 %}
+                                <small class="d-block text-muted">Above budget</small>
+                                {% else %}
+                                <small class="d-block text-muted">Below budget</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Summary Statistics -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">Legend:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Expected:</strong> Number of times activity should be completed based on frequency</li>
+                            <li><strong>Actual:</strong> Number of times activity was actually completed</li>
+                            <li><strong>Actual %:</strong> (Actual / Expected) × 100</li>
+                            <li><strong>Budgeted %:</strong> Target budget percentage allocated for this activity</li>
+                            <li><strong>Variance:</strong> Difference between Actual % and Budgeted % (positive = over-performing)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <p class="mb-0">No activities found for the selected criteria.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Handle month_year select properly
+    document.getElementById('month_select').addEventListener('change', function() {
+        const value = this.value;
+        const [year, month] = value.split('-');
+        const form = this.form;
+        
+        // Clear the combined field and add separate year/month inputs
+        const yearInput = document.createElement('input');
+        yearInput.type = 'hidden';
+        yearInput.name = 'year';
+        yearInput.value = year;
+        
+        const monthInput = document.createElement('input');
+        monthInput.type = 'hidden';
+        monthInput.name = 'month';
+        monthInput.value = month;
+        
+        form.appendChild(yearInput);
+        form.appendChild(monthInput);
+        this.name = '';  // Clear the original name so it doesn't get submitted
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% comment %} Simplified activity calendar partial for embedding in forms {% endcomment %}
+<div class="js-cal-meta" data-frequency="{{ activity.frequency }}" data-anchor="{{ anchor_date|date:'Y-m-d' }}" style="display:none"></div>
+<div class="mb-2 d-flex justify-content-between align-items-center">
+  <strong>{{ month_name }} {{ year }}</strong>
+  {% if not lock_nav %}
+  <div class="btn-group btn-group-sm" role="group" aria-label="Calendar navigation">
+    <button type="button" class="btn btn-outline-secondary js-cal-prev">Prev</button>
+    <button type="button" class="btn btn-outline-secondary js-cal-next">Next</button>
+  </div>
+  {% endif %}
+</div>
+<table class="table table-bordered m-0">
+  <thead class="table-light">
+    <tr>
+      <th class="text-center">Mon</th>
+      <th class="text-center">Tue</th>
+      <th class="text-center">Wed</th>
+      <th class="text-center">Thu</th>
+      <th class="text-center">Fri</th>
+      <th class="text-center">Sat</th>
+      <th class="text-center">Sun</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for week in month_weeks %}
+    <tr>
+      {% for d in week %}
+      <td class="align-top {% if not d.is_current %}bg-light text-muted{% endif %}" style="min-width: 120px; height: 110px;">
+        <div class="d-flex justify-content-between">
+          <div><strong>{{ d.date.day }}</strong></div>
+        </div>
+        {% if d.is_current %}
+          {% if activity.frequency == 'MONTHLY' and monthly_completed_count >= 1 %}
+            <div class="mt-2 text-muted small">Monthly quota reached</div>
+          {% else %}
+          {% if d.records %}
+          <div class="mt-1 small">
+            {% for r in d.records %}
+              <div>
+                <span class="badge {% if r.status == 'VERIFIED' %}bg-primary{% elif r.status == 'COMPLETED' %}bg-success{% elif r.status == 'IN_PROGRESS' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ r.status }}</span>
+              </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="mt-2">
+            {% if activity.frequency == 'TWICE_DAILY' and not lock_nav %}
+              <div class="d-flex flex-column gap-1">
+                {# Slot 1 #}
+                {% if d.completed_count|default:0 >= 1 %}
+                  <span class="text-success small">Completed ✔</span>
+                {% else %}
+                  <button type="button" class="btn btn-sm btn-outline-success js-complete-day" data-date="{{ d.date|date:'Y-m-d' }}">Mark Completed</button>
+                {% endif %}
+                {# Slot 2 #}
+                {% if d.completed_count|default:0 >= 2 %}
+                  <span class="text-success small">Completed ✔</span>
+                {% else %}
+                  <button type="button" class="btn btn-sm btn-outline-success js-complete-day" data-date="{{ d.date|date:'Y-m-d' }}">Mark Completed</button>
+                {% endif %}
+              </div>
+            {% else %}
+              {% if not d.has_completed %}
+                <button type="button" class="btn btn-sm btn-outline-success js-complete-day" data-date="{{ d.date|date:'Y-m-d' }}">Mark Completed</button>
+              {% else %}
+                <span class="text-success small">Completed ✔</span>
+              {% endif %}
+            {% endif %}
+          </div>
+          {% endif %}
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

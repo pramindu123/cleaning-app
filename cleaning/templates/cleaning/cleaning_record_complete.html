@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Complete Cleaning Task{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Complete Cleaning Task</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Task Details -->
+                    <div class="alert alert-info mb-4">
+                        <h5>Task Details</h5>
+                        <p><strong>Unit:</strong> {{ record.unit.unit_name }}</p>
+                        <p><strong>Location:</strong> {{ record.unit.get_full_location }}</p>
+                        <p><strong>Scheduled Date:</strong> {{ record.scheduled_date }}</p>
+                        
+                    </div>
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
+                            {{ form.notes }}
+                            {% if form.notes.help_text %}
+                            <div class="form-text">{{ form.notes.help_text }}</div>
+                            {% endif %}
+                            {% if form.notes.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.notes.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <strong>Note:</strong> By submitting this form, you confirm that the cleaning task has been completed.
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'cleaning:cleaning_record_detail' record.pk %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-success">Mark as Completed</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

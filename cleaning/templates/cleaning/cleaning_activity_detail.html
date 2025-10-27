@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Activity Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>Cleaning Activity Details</h3>
+                    <span class="badge {% if activity.is_active %}bg-success{% else %}bg-secondary{% endif %} fs-6">
+                        {% if activity.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <!-- Activity Information -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">Activity Information</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Activity Name:</strong> {{ activity.activity_name }}</p>
+                                <p><strong>Unit:</strong> {{ activity.unit.unit_name }}</p>
+                                <p><strong>Location:</strong> {{ activity.unit.get_full_location }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Frequency:</strong> {{ activity.get_frequency_display }}</p>
+                                <p><strong>Times per Week:</strong> {{ activity.get_frequency_per_week }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    {% if activity.description %}
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">Description</h5>
+                        <p class="text-muted">{{ activity.description }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Special Instructions -->
+                    {% if activity.special_instructions %}
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">Special Instructions</h5>
+                        <p class="text-muted">{{ activity.special_instructions }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Recent Cleaning Records -->
+                    {% if recent_records %}
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">Recent Cleaning Records</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Assigned To</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in recent_records %}
+                                    <tr>
+                                        <td>{{ record.scheduled_date }}</td>
+                                        <td>{{ record.assigned_to.get_full_name|default:record.assigned_to.username }}</td>
+                                        <td>
+                                            <span class="badge {% if record.status == 'VERIFIED' %}bg-primary{% elif record.status == 'COMPLETED' %}bg-success{% elif record.status == 'IN_PROGRESS' %}bg-info{% else %}bg-warning text-dark{% endif %}">
+                                                {{ record.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'cleaning:cleaning_record_detail' record.pk %}" class="btn btn-sm btn-info">View</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Timestamps -->
+                    <div class="mb-3">
+                        <h5 class="border-bottom pb-2">Record Information</h5>
+                        <p><strong>Created:</strong> {{ activity.created_at|date:"Y-m-d H:i" }}</p>
+                        <p><strong>Last Updated:</strong> {{ activity.updated_at|date:"Y-m-d H:i" }}</p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'cleaning:cleaning_activity_list' %}" class="btn btn-secondary">Back to List</a>
+                        <div>
+                            {% if user.is_manager %}
+                            <a href="{% url 'cleaning:cleaning_activity_calendar' activity.pk %}" class="btn btn-outline-primary">Open Calendar</a>
+                            <a href="{% url 'cleaning:cleaning_activity_update' activity.pk %}" class="btn btn-warning">Edit</a>
+                            <a href="{% url 'cleaning:cleaning_activity_delete' activity.pk %}" class="btn btn-danger">Delete</a>
+                            <a href="{% url 'cleaning:cleaning_record_create' %}?activity={{ activity.pk }}" class="btn btn-success">Create Cleaning Record</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

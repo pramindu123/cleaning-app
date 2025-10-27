@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify Cleaning Record{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Verify Cleaning Record</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Task Details -->
+                    <div class="alert alert-info mb-4">
+                        <h5>Task Details</h5>
+                        <p><strong>Unit:</strong> {{ record.unit.unit_name }}</p>
+                        <p><strong>Location:</strong> {{ record.unit.get_full_location }}</p>
+                        <p><strong>Assigned To:</strong> {{ record.assigned_to.get_full_name|default:record.assigned_to.username }}</p>
+                        <p><strong>Scheduled Date:</strong> {{ record.scheduled_date }}</p>
+                        <p><strong>Completed On:</strong> {{ record.completed_date|date:"Y-m-d H:i" }}</p>
+                        {% if record.notes %}
+                        <p><strong>Assistant Notes:</strong> {{ record.notes }}</p>
+                        {% endif %}
+                    </div>
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.verification_notes.id_for_label }}" class="form-label">{{ form.verification_notes.label }} *</label>
+                            {{ form.verification_notes }}
+                            {% if form.verification_notes.help_text %}
+                            <div class="form-text">{{ form.verification_notes.help_text }}</div>
+                            {% endif %}
+                            {% if form.verification_notes.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.verification_notes.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="alert alert-success">
+                            <strong>Note:</strong> By submitting this form, you verify that the cleaning has been completed satisfactorily.
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'cleaning:cleaning_record_detail' record.pk %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Verify Cleaning</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

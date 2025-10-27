@@ -27,9 +27,32 @@
                             </div>
                         {% endif %}
 
+                        {% if not form.instance.pk %}
+                        <!-- Only show dropdown when creating new faculty -->
+                        <div class="mb-3">
+                            <label for="{{ form.existing_faculty.id_for_label }}" class="form-label">
+                                {{ form.existing_faculty.label }}
+                            </label>
+                            {{ form.existing_faculty }}
+                            {% if form.existing_faculty.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.existing_faculty.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Select an existing faculty from the database or create a new one below
+                            </small>
+                        </div>
+
+                        <div class="text-center my-3">
+                            <strong class="text-muted">OR</strong>
+                        </div>
+                        {% endif %}
+
                         <div class="mb-3">
                             <label for="{{ form.faculty_name.id_for_label }}" class="form-label">
-                                Faculty Name <span class="text-danger">*</span>
+                                {{ form.faculty_name.label }}
+                                {% if form.instance.pk %}<span class="text-danger">*</span>{% endif %}
                             </label>
                             {{ form.faculty_name }}
                             {% if form.faculty_name.errors %}
@@ -38,7 +61,26 @@
                                 </div>
                             {% endif %}
                             <small class="form-text text-muted">
-                                Enter the faculty name (e.g., "Faculty of Science", "Faculty of Engineering")
+                                {% if form.instance.pk %}
+                                    Update the faculty name
+                                {% else %}
+                                    Enter a new faculty name (e.g., "Faculty of Science", "Faculty of Engineering")
+                                {% endif %}
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.zone.id_for_label }}" class="form-label">
+                                Zone (optional)
+                            </label>
+                            {{ form.zone }}
+                            {% if form.zone.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.zone.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Associate this faculty with a zone. If not applicable, leave as "No Zone".
                             </small>
                         </div>
 
@@ -57,4 +99,37 @@
         </div>
     </div>
 </div>
+
+{% if not form.instance.pk %}
+<script>
+    // Add interactivity to prevent selecting both options
+    document.addEventListener('DOMContentLoaded', function() {
+        const existingFacultySelect = document.getElementById('existing_faculty');
+        const newFacultyInput = document.getElementById('new_faculty_name');
+        const zoneSelect = document.getElementById('faculty_zone_select');
+        
+        if (existingFacultySelect && newFacultyInput) {
+            // When selecting from dropdown, clear the text input
+            existingFacultySelect.addEventListener('change', function() {
+                if (this.value) {
+                    newFacultyInput.value = '';
+                    newFacultyInput.disabled = true;
+                    if (zoneSelect) { zoneSelect.disabled = true; }
+                } else {
+                    newFacultyInput.disabled = false;
+                    if (zoneSelect) { zoneSelect.disabled = false; }
+                }
+            });
+            
+            // When typing in text input, reset dropdown selection
+            newFacultyInput.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    existingFacultySelect.value = '';
+                    if (zoneSelect) { zoneSelect.disabled = false; }
+                }
+            });
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

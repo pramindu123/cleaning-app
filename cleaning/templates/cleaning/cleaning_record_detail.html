@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Cleaning Record Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>Cleaning Record Details</h3>
+                    <span class="badge {% if record.status == 'PENDING' %}bg-warning text-dark{% elif record.status == 'IN_PROGRESS' %}bg-info{% elif record.status == 'COMPLETED' %}bg-success{% elif record.status == 'VERIFIED' %}bg-primary{% endif %} fs-6">
+                        {{ record.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <!-- Unit Information -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">Unit Information</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Unit Name:</strong> {{ record.unit.unit_name }}</p>
+                                <p><strong>Full Location:</strong> {{ record.unit.get_full_location }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Zone:</strong> {{ record.unit.zone.zone_name }}</p>
+                                {% if record.unit.section %}
+                                <p><strong>Section:</strong> {{ record.unit.section.section_name }}</p>
+                                {% endif %}
+                                {% if record.unit.faculty %}
+                                <p><strong>Faculty:</strong> {{ record.unit.faculty.faculty_name }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Information -->
+                    {% if record.activity %}
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">Activity Information</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Activity:</strong> {{ record.activity.activity_name }}</p>
+                                <p><strong>Frequency:</strong> {{ record.activity.get_frequency_display }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                
+                                {% if record.activity.special_instructions %}
+                                <p><strong>Special Instructions:</strong> {{ record.activity.special_instructions }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Assignment Information -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">Assignment Information</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Assigned To:</strong> {{ record.assigned_to.get_full_name|default:record.assigned_to.username }}</p>
+                                <p><strong>Scheduled Date:</strong> {{ record.scheduled_date }}</p>
+                                
+                            </div>
+                            <div class="col-md-6">
+                                {% if record.completed_date %}
+                                <p><strong>Completed On:</strong> {{ record.completed_date|date:"Y-m-d H:i" }}</p>
+                                {% endif %}
+                                {% if record.verified_by %}
+                                <p><strong>Verified By:</strong> {{ record.verified_by.get_full_name|default:record.verified_by.username }}</p>
+                                {% endif %}
+                                {% if record.verified_date %}
+                                <p><strong>Verified On:</strong> {{ record.verified_date|date:"Y-m-d H:i" }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    {% if record.notes %}
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">Notes</h5>
+                        <p class="text-muted">{{ record.notes }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Verification Notes -->
+                    {% if record.verification_notes %}
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">Verification Notes</h5>
+                        <p class="text-muted">{{ record.verification_notes }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Timestamps -->
+                    <div class="mb-3">
+                        <h5 class="border-bottom pb-2">Record Information</h5>
+                        <p><strong>Created:</strong> {{ record.created_at|date:"Y-m-d H:i" }}</p>
+                        <p><strong>Last Updated:</strong> {{ record.updated_at|date:"Y-m-d H:i" }}</p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'cleaning:cleaning_record_list' %}" class="btn btn-secondary">Back to List</a>
+                        <div>
+                            {% if user.is_manager and record.can_be_edited %}
+                            <a href="{% url 'cleaning:cleaning_record_update' record.pk %}" class="btn btn-warning">Edit</a>
+                            <a href="{% url 'cleaning:cleaning_record_delete' record.pk %}" class="btn btn-danger">Delete</a>
+                            {% endif %}
+                            
+                            {% if user.is_assistant and record.assigned_to == user and record.can_be_edited %}
+                            <a href="{% url 'cleaning:cleaning_record_update' record.pk %}" class="btn btn-warning">Edit</a>
+                            {% endif %}
+                            
+                            {% if user.is_assistant and record.assigned_to == user and record.status in 'PENDING,IN_PROGRESS' %}
+                            <a href="{% url 'cleaning:cleaning_record_complete' record.pk %}" class="btn btn-success">Mark as Completed</a>
+                            {% endif %}
+                            
+                            {% if user.is_manager and record.can_be_verified %}
+                            <a href="{% url 'cleaning:cleaning_record_verify' record.pk %}" class="btn btn-primary">Verify Cleaning</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
