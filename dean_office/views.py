@@ -85,6 +85,8 @@ def dashboard(request):
     cleaning_operations = []
     faculties = []
     selected_faculty = None
+    # ensure kpis is always defined even if an exception occurs below
+    kpis = {}
     try:
         Faculty = apps.get_model('cleaning', 'Faculty')
         CleaningOperation = apps.get_model('cleaning', 'CleaningOperation')
@@ -98,6 +100,45 @@ def dashboard(request):
             if selected_faculty:
                 # filter cleaning operations by selected faculty if model has unit->faculty
                 cleaning_operations = cleaning_operations.filter(unit__faculty=selected_faculty)
+
+        # Build KPIs dynamically from cleaning models when available
+        kpis = {}
+        try:
+            CleaningActivity = apps.get_model('cleaning', 'CleaningActivity')
+            CleaningRecord = apps.get_model('cleaning', 'CleaningRecord')
+            # total activities (tasks) defined for units in the faculty (or overall)
+            if CleaningActivity is not None:
+                if selected_faculty:
+                    total_activities = CleaningActivity.objects.filter(unit__faculty=selected_faculty).count()
+                else:
+                    total_activities = CleaningActivity.objects.all().count()
+            else:
+                total_activities = 0
+
+            # records: scheduled/completed/pending counts
+            if CleaningRecord is not None:
+                qs = CleaningRecord.objects.select_related('unit')
+                if selected_faculty:
+                    qs = qs.filter(unit__faculty=selected_faculty)
+                total_records = qs.count()
+                completed = qs.filter(status__in=['COMPLETED', 'VERIFIED']).count()
+                pending = qs.filter(status='PENDING').count()
+            else:
+                total_records = completed = pending = 0
+
+            efficiency = round((completed / total_records) * 100, 2) if total_records else 0
+
+            kpis = {
+                'Total Activities': total_activities,
+                'Total Records': total_records,
+                'Completed Tasks': completed,
+                'Pending Tasks': pending,
+                'Efficiency': f"{efficiency}%",
+            }
+        except LookupError:
+            logger.debug('cleaning models not available to compute KPIs')
+        except Exception:
+            logger.exception('Error computing KPIs')
     except LookupError:
         # Model not available; log and continue with empty data
         logger.debug('cleaning.CleaningOperation model not found; dashboard will show no operations')
@@ -108,14 +149,10 @@ def dashboard(request):
     context = {
         'user': request.user,
         'cleaning_operations': cleaning_operations,
-        'kpis': {
-            'completed_tasks': 42,
-            'pending_tasks': 8,
-            'efficiency': '95%',
-        },
+        'kpis': kpis,
         'faculties': faculties,
         'selected_faculty': selected_faculty,
-        'faculty_options': _build_faculty_options(Faculty, faculties) if Faculty is not None else [],
+        'faculty_options': _build_faculty_options(None, faculties),
         'selected_param': request.GET.get('faculty') or request.GET.get('faculty_id'),
     }
 
