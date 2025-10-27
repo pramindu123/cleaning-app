@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'accounts',
     'cleaning',
     'manager',
+    'assistant',
 ]
 
 MIDDLEWARE = [

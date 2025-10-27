@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Schedule Calendar - Assistant Dashboard{% endblock %}
+
+{% block extra_head %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.js'></script>
+<style>
+    .fc-event {
+        cursor: pointer;
+    }
+    .fc-event-title {
+        white-space: normal;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Schedule Calendar</h2>
+        <a href="{% url 'assistant:dashboard' %}" class="btn btn-outline-primary">Back to Dashboard</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div id="calendar"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        events: [
+            {% for schedule in schedules %}
+            {
+                title: '{{ schedule.unit.name }}',
+                start: '{{ schedule.month|date:"Y-m-d" }}',
+                url: '{% url "assistant:schedule_detail" schedule.pk %}',
+                backgroundColor: '{% if schedule.status == "draft" %}#6c757d{% elif schedule.status == "submitted" %}#0d6efd{% elif schedule.status == "approved" %}#198754{% else %}#ffc107{% endif %}',
+                borderColor: '{% if schedule.status == "draft" %}#5a6268{% elif schedule.status == "submitted" %}#0a58ca{% elif schedule.status == "approved" %}#146c43{% else %}#d39e00{% endif %}'
+            },
+            {% endfor %}
+        ],
+        eventClick: function(info) {
+            if (info.event.url) {
+                window.location.href = info.event.url;
+                info.jsEvent.preventDefault();
+            }
+        }
+    });
+    calendar.render();
+});
+</script>
+{% endblock %}
