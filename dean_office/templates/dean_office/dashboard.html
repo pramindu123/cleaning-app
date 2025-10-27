@@ -10,9 +10,12 @@ Office Dashboard{% endblock %} {% block content %}
     </div>
   </div>
 
+  {% include 'dean_office/_faculty_filter.html' %}
+
   <p class="text-muted">
     Welcome to the Dean Office dashboard. Monitor cleaning operations and view
-    key performance indicators below.
+    key performance indicators below. {% if selected_faculty %} Showing results
+    for <strong>{{ selected_faculty.faculty_name }}</strong>. {% endif %}
   </p>
 
   <div class="row g-3">
