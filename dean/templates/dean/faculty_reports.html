@@ -1,0 +1,253 @@
+{% extends 'dean/base.html' %}
+
+{% block title %}Faculty Reports - Dean Office{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>
+                    <i class="bi bi-file-earmark-bar-graph"></i> Faculty Detailed Reports
+                    {% if user_faculty %}
+                        <span class="badge bg-info">{{ user_faculty.faculty_name }}</span>
+                    {% endif %}
+                </h2>
+                <p class="text-muted">Comprehensive cleaning reports and analytics</p>
+            </div>
+            <div>
+                <a href="{% url 'dean:dashboard' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if faculty_reports %}
+        {% for report in faculty_reports %}
+        <!-- Faculty Report Card -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-bank"></i> {{ report.faculty.faculty_name }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Summary Statistics -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h5 class="text-primary">{{ report.total_units }}</h5>
+                            <small class="text-muted">Total Units</small>
+                            <div class="mt-2">
+                                <span class="badge bg-success">{{ report.active_units }} Active</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h5 class="text-info">{{ report.total_activities }}</h5>
+                            <small class="text-muted">Total Activities</small>
+                            <div class="mt-2">
+                                <span class="badge bg-info">{{ report.active_activities }} Active</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h5 class="text-success">{{ report.total_records }}</h5>
+                            <small class="text-muted">Total Records</small>
+                            <div class="mt-2">
+                                <span class="badge bg-success">{{ report.completed }} Completed</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h5 class="text-warning">{{ report.completion_rate }}%</h5>
+                            <small class="text-muted">Completion Rate</small>
+                            <div class="progress mt-2" style="height: 20px;">
+                                <div class="progress-bar 
+                                    {% if report.completion_rate >= 75 %}bg-success
+                                    {% elif report.completion_rate >= 50 %}bg-info
+                                    {% elif report.completion_rate >= 25 %}bg-warning
+                                    {% else %}bg-danger{% endif %}"
+                                     role="progressbar"
+                                     style="width: {{ report.completion_rate }}%">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Records by Status -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <h5><i class="bi bi-bar-chart"></i> Records by Status</h5>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="card border-warning">
+                                    <div class="card-body text-center">
+                                        <h3 class="text-warning">{{ report.pending }}</h3>
+                                        <p class="mb-0">Pending</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-primary">
+                                    <div class="card-body text-center">
+                                        <h3 class="text-primary">{{ report.in_progress }}</h3>
+                                        <p class="mb-0">In Progress</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-success">
+                                    <div class="card-body text-center">
+                                        <h3 class="text-success">{{ report.completed }}</h3>
+                                        <p class="mb-0">Completed</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-info">
+                                    <div class="card-body text-center">
+                                        <h3 class="text-info">{{ report.verified }}</h3>
+                                        <p class="mb-0">Verified</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activities by Frequency -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <h5><i class="bi bi-calendar-check"></i> Activities by Frequency</h5>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="card bg-danger text-white">
+                                    <div class="card-body text-center">
+                                        <h3>{{ report.daily_activities }}</h3>
+                                        <p class="mb-0">Daily</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-warning text-dark">
+                                    <div class="card-body text-center">
+                                        <h3>{{ report.weekly_activities }}</h3>
+                                        <p class="mb-0">Weekly</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-info text-white">
+                                    <div class="card-body text-center">
+                                        <h3>{{ report.monthly_activities }}</h3>
+                                        <p class="mb-0">Monthly</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-secondary text-white">
+                                    <div class="card-body text-center">
+                                        <h3>{{ report.quarterly_activities }}</h3>
+                                        <p class="mb-0">Quarterly</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unit Details Table -->
+                <div class="row">
+                    <div class="col-12">
+                        <h5><i class="bi bi-building"></i> Unit Performance Details</h5>
+                        {% if report.unit_details %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Unit Name</th>
+                                            <th>Section</th>
+                                            <th>Zone</th>
+                                            <th>Activities</th>
+                                            <th>Total Records</th>
+                                            <th>Completed</th>
+                                            <th>Pending</th>
+                                            <th>Completion Rate</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for unit_detail in report.unit_details %}
+                                        <tr>
+                                            <td><strong>{{ unit_detail.unit.unit_name }}</strong></td>
+                                            <td>
+                                                {% if unit_detail.unit.section %}
+                                                    {{ unit_detail.unit.section.section_name }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if unit_detail.unit.zone %}
+                                                    {{ unit_detail.unit.zone.zone_name }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ unit_detail.activities_count }}</span>
+                                            </td>
+                                            <td>{{ unit_detail.total_records }}</td>
+                                            <td>
+                                                <span class="badge bg-success">{{ unit_detail.completed }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-warning">{{ unit_detail.pending }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="height: 25px; min-width: 120px;">
+                                                    <div class="progress-bar 
+                                                        {% if unit_detail.completion_rate >= 75 %}bg-success
+                                                        {% elif unit_detail.completion_rate >= 50 %}bg-info
+                                                        {% elif unit_detail.completion_rate >= 25 %}bg-warning
+                                                        {% else %}bg-danger{% endif %}"
+                                                         role="progressbar"
+                                                         style="width: {{ unit_detail.completion_rate }}%">
+                                                        {{ unit_detail.completion_rate }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if unit_detail.unit.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted text-center py-4">No unit details available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No faculty reports available at this time.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

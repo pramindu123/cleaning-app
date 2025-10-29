@@ -85,7 +85,6 @@ def cleaning_record_create(request):
                 unit = form.cleaned_data['unit']
                 activity = form.cleaned_data.get('activity')
                 assigned_to = form.cleaned_data['assigned_to']
-                status = 'PENDING'  # Default status for new records
                 notes = form.cleaned_data.get('notes', '')
 
                 # If assistant is creating, force assign to themselves
@@ -95,6 +94,9 @@ def cleaning_record_create(request):
                 created_records = []
                 if selected_days:
                     # Calendar-driven multi-day creation. Require an activity.
+                    # When dates are selected from calendar, mark them as COMPLETED
+                    status = 'COMPLETED'
+                    
                     if not activity:
                         messages.error(request, 'Please select an activity to use the calendar selections.')
                         raise ValueError('Activity required for calendar selections')
@@ -215,11 +217,11 @@ def cleaning_record_create(request):
                         messages.warning(request, 'No records were created from the selected days (may be due to frequency limits or invalid dates).')
                         # Fall through to create single record as configured below
 
-                # Default single-record creation path
+                # Default single-record creation path (no calendar selection)
                 record = form.save(commit=False)
                 if request.user.is_assistant():
                     record.assigned_to = request.user
-                record.status = 'PENDING'  # Set default status
+                record.status = 'PENDING'  # Set default status for non-calendar records
                 record.save()
                 messages.success(request, f'Cleaning record created successfully for {record.unit.unit_name}.')
                 return redirect('cleaning:cleaning_record_detail', pk=record.pk)
@@ -1059,11 +1061,18 @@ def activity_performance_report(request):
 @login_required
 def faculty_cleaning_report(request, faculty_id):
     """Display cleaning details for all units associated with a faculty"""
-    if not request.user.is_manager():
-        messages.error(request, 'Only managers can view faculty reports.')
+    # Allow both managers and dean office users
+    if not (request.user.is_manager() or request.user.is_dean_office()):
+        messages.error(request, 'You do not have permission to view faculty reports.')
         return redirect('cleaning:cleaning_record_list')
     
     faculty = get_object_or_404(Faculty, pk=faculty_id)
+    
+    # Dean users can only view their assigned faculty
+    if request.user.is_dean_office() and request.user.faculty:
+        if faculty.id != request.user.faculty.id:
+            messages.error(request, 'You can only view reports for your assigned faculty.')
+            return redirect('cleaning:faculty_list_report')
     
     # Get year and month from query params, default to current month
     today = date.today()
@@ -1144,6 +1153,7 @@ def faculty_cleaning_report(request, faculty_id):
         'total_expected': total_expected,
         'total_actual': total_actual,
         'faculty_completion_pct': faculty_completion_pct,
+        'is_dean': request.user.is_dean_office(),
     }
     return render(request, 'cleaning/faculty_cleaning_report.html', context)
 
@@ -1151,11 +1161,18 @@ def faculty_cleaning_report(request, faculty_id):
 @login_required
 def faculty_list_report(request):
     """List all faculties for cleaning report access"""
-    if not request.user.is_manager():
-        messages.error(request, 'Only managers can view faculty reports.')
+    # Allow both managers and dean office users
+    if not (request.user.is_manager() or request.user.is_dean_office()):
+        messages.error(request, 'You do not have permission to view faculty reports.')
         return redirect('cleaning:cleaning_record_list')
     
-    faculties = Faculty.objects.all().order_by('faculty_name')
+    # Filter faculties based on user role
+    if request.user.is_dean_office() and request.user.faculty:
+        # Dean users see only their assigned faculty
+        faculties = Faculty.objects.filter(id=request.user.faculty.id).order_by('faculty_name')
+    else:
+        # Managers see all faculties
+        faculties = Faculty.objects.all().order_by('faculty_name')
     
     # Add unit counts to each faculty
     faculties_data = []
@@ -1174,6 +1191,7 @@ def faculty_list_report(request):
     
     context = {
         'faculties_data': faculties_data,
+        'is_dean': request.user.is_dean_office(),
     }
     return render(request, 'cleaning/faculty_list_report.html', context)
 

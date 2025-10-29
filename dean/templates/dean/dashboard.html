@@ -1,0 +1,317 @@
+{% extends 'dean/base.html' %}
+
+{% block title %}Dean Office Dashboard - Faculty Cleaning Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>
+                    <i class="bi bi-clipboard-data"></i> Faculty Cleaning Dashboard
+                    {% if user_faculty %}
+                        <span class="badge bg-info">{{ user_faculty.faculty_name }}</span>
+                    {% endif %}
+                </h2>
+                <p class="text-muted">Overview of cleaning activities and records for your faculty</p>
+            </div>
+            <div>
+                <a href="{% url 'cleaning:faculty_list_report' %}" class="btn btn-primary">
+                    <i class="bi bi-file-earmark-bar-graph"></i> View Faculty Reports
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p>Total Units</p>
+                        <h3>{{ total_units }}</h3>
+                        <small>{{ active_units }} Active</small>
+                    </div>
+                    <i class="bi bi-building display-4 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p>Completed</p>
+                        <h3>{{ completed_count }}</h3>
+                        <small>Cleaning Records</small>
+                    </div>
+                    <i class="bi bi-check-circle display-4 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p>Verified</p>
+                        <h3>{{ verified_count }}</h3>
+                        <small>Cleaning Records</small>
+                    </div>
+                    <i class="bi bi-patch-check display-4 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p>Pending</p>
+                        <h3>{{ pending_count }}</h3>
+                        <small>Cleaning Records</small>
+                    </div>
+                    <i class="bi bi-hourglass-split display-4 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Faculty Statistics & Completion Rate -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart-fill"></i> Faculty Statistics</h5>
+                </div>
+                <div class="card-body">
+                    {% if faculty_stats %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Faculty</th>
+                                        <th>Total Units</th>
+                                        <th>Active Units</th>
+                                        <th>Activities</th>
+                                        <th>Total Records</th>
+                                        <th>Completed</th>
+                                        <th>Verified</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for faculty in faculty_stats %}
+                                    <tr>
+                                        <td><strong>{{ faculty.faculty_name }}</strong></td>
+                                        <td><span class="badge bg-primary">{{ faculty.total_units }}</span></td>
+                                        <td><span class="badge bg-success">{{ faculty.active_units }}</span></td>
+                                        <td><span class="badge bg-info">{{ faculty.total_activities }}</span></td>
+                                        <td><strong>{{ faculty.total_records }}</strong></td>
+                                        <td><span class="badge bg-success">{{ faculty.completed_records }}</span></td>
+                                        <td><span class="badge bg-info">{{ faculty.verified_records }}</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">No faculty data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart-fill"></i> Completion Rate</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="display-1 text-success mb-3">
+                        {{ completion_rate }}%
+                    </div>
+                    <p class="text-muted">Overall completion rate</p>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ completion_rate }}%"
+                             aria-valuenow="{{ completion_rate }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ completion_rate }}%
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            {{ completed_count|add:verified_count }} of {{ total_records }} records
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Units Performance -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> Unit Performance</h5>
+                </div>
+                <div class="card-body">
+                    {% if units_by_status %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Unit Name</th>
+                                        <th>Section</th>
+                                        <th>Total Records</th>
+                                        <th>Completed</th>
+                                        <th>Completion Rate</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in units_by_status %}
+                                    <tr>
+                                        <td><strong>{{ item.unit.unit_name }}</strong></td>
+                                        <td>
+                                            {% if item.unit.section %}
+                                                {{ item.unit.section.section_name }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item.total_records }}</td>
+                                        <td><span class="badge bg-success">{{ item.completed }}</span></td>
+                                        <td>
+                                            <div class="progress" style="height: 20px; min-width: 100px;">
+                                                <div class="progress-bar 
+                                                    {% if item.completion_rate >= 75 %}bg-success
+                                                    {% elif item.completion_rate >= 50 %}bg-info
+                                                    {% elif item.completion_rate >= 25 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}"
+                                                     role="progressbar"
+                                                     style="width: {{ item.completion_rate }}%">
+                                                    {{ item.completion_rate }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if item.unit.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">No unit performance data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Cleaning Records & Activities -->
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Cleaning Records</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_records %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Unit</th>
+                                        <th>Activity</th>
+                                        <th>Assigned To</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in recent_records %}
+                                    <tr>
+                                        <td><strong>{{ record.unit.unit_name }}</strong></td>
+                                        <td>{{ record.activity.activity_name|default:"-" }}</td>
+                                        <td>
+                                            {% if record.assigned_to %}
+                                                <i class="bi bi-person"></i> {{ record.assigned_to.username }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.completed_date %}
+                                                {{ record.completed_date|date:"M d, Y" }}
+                                            {% else %}
+                                                {{ record.created_at|date:"M d, Y" }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.status == 'COMPLETED' %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif record.status == 'VERIFIED' %}
+                                                <span class="badge bg-info">Verified</span>
+                                            {% elif record.status == 'IN_PROGRESS' %}
+                                                <span class="badge bg-primary">In Progress</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">No recent cleaning records.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-list-task"></i> Active Cleaning Activities</h5>
+                </div>
+                <div class="card-body">
+                    {% if activities %}
+                        <div class="list-group">
+                            {% for activity in activities %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ activity.activity_name }}</h6>
+                                    <small>
+                                        <span class="badge 
+                                            {% if activity.frequency == 'DAILY' %}bg-danger
+                                            {% elif activity.frequency == 'WEEKLY' %}bg-warning
+                                            {% elif activity.frequency == 'MONTHLY' %}bg-info
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ activity.get_frequency_display }}
+                                        </span>
+                                    </small>
+                                </div>
+                                <p class="mb-1 small text-muted">
+                                    <i class="bi bi-building"></i> {{ activity.unit.unit_name }}
+                                </p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">No active cleaning activities.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

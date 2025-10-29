@@ -68,6 +68,10 @@ def dashboard_view(request):
     if request.user.role == 'ASSISTANT':
         return redirect('assistant:dashboard')
     
+    # Redirect dean office users to their dedicated dashboard
+    if request.user.role == 'DEAN_OFFICE':
+        return redirect('dean:dashboard')
+    
     context = {
         'user': request.user,
         'role': request.user.get_role_display(),
