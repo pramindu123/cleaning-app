@@ -23,3 +23,11 @@ urlpatterns = [
     path('cleaning/', include('cleaning.urls')),
     path('manager/', include('manager.urls')),
 ]
+
+
+
+
+
+
+
+
