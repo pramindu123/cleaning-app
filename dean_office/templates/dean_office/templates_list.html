@@ -1,0 +1,39 @@
+{% extends 'dean_office/base.html' %} {% load static %} {% block title %}
+Templates - Dean Office {% endblock %} {% block content %}
+<div class="container mt-4">
+  <h1 class="h4 mb-3">Unit Templates by Faculty</h1>
+
+  {% include 'dean_office/_faculty_filter.html' %} {% if faculty_templates %}
+  {%for item in faculty_templates %}
+  <div class="card mb-3 shadow">
+    <div class="card-header bg-secondary text-white">
+      {{ item.faculty.faculty_name }}
+    </div>
+    <div class="card-body">
+      {% if item.templates %}
+      <ul class="list-group">
+        {% for t in item.templates %}
+        <li
+          class="list-group-item d-flex justify-content-between align-items-center"
+        >
+          <div>
+            <strong>{{ t.unit.unit_name }}</strong>
+            <div class="small text-muted">{{ t.template_name }}</div>
+          </div>
+          <div>
+            <a class="btn btn-sm btn-outline-primary" href="#">Edit</a>
+            <a class="btn btn-sm btn-outline-secondary" href="#">Preview</a>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="text-muted">No templates for this faculty.</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %} {% else %}
+  <div class="alert alert-info">No template data available.</div>
+  {% endif %}
+</div>
+{% endblock %}

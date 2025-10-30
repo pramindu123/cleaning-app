@@ -1,0 +1,34 @@
+/* Small overrides and helpers for Dean Office */
+
+/* Ensure dean_office pages show the gradient background, without affecting other apps */
+body.dean-office {
+  /* enforce gradient background with high specificity to override other rules */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background-attachment: fixed; /* keep gradient fixed while scrolling */
+}
+
+/* Make Bootstrap primary buttons white with dark text and subtle border */
+.btn-primary {
+  background-color: #ffffff !important;
+  color: #222 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: none !important;
+}
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: #ffffff !important;
+  color: #111 !important;
+  filter: brightness(0.95);
+}
+
+/* Ensure outlines on focus remain visible when background is white */
+.btn-primary:focus {
+  box-shadow: 0 0 0 0.2rem rgba(118, 75, 162, 0.25) !important;
+}
+
+/* Improve spacing for main content area */
+main.container {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}

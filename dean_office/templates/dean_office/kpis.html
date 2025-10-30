@@ -1,0 +1,91 @@
+{% extends 'dean_office/base.html' %} {% load static %} {% block title %}KPIs -
+Dean Office{% endblock %} {% block content %}
+<div class="container mt-4">
+  <h1 class="h4 mb-3">KPIs by Faculty</h1>
+
+  {% include 'dean_office/_faculty_filter.html' %} {% if faculty_data %}
+  <div class="row g-3">
+    {% for item in faculty_data %}
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          {{ item.faculty.faculty_name }}
+        </div>
+        <div class="card-body">
+          <p class="mb-1">
+            <strong>Total Units:</strong> {{ item.total_units }}
+          </p>
+          <p class="mb-1 text-success">
+            <strong>Active Units:</strong> {{ item.active_units }}
+          </p>
+          <p class="mb-1 text-secondary">
+            <strong>Inactive Units:</strong> {{ item.inactive_units }}
+          </p>
+          <div class="progress mt-2" style="height: 12px">
+            <div
+              class="progress-bar bg-success progress-bar-dynamic"
+              role="progressbar"
+              data-width="{{ item.percent_active|default:0|floatformat:0 }}"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              &nbsp;
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-info">No faculty KPI data available.</div>
+  {% endif %} {% if selected_faculty %}
+  <div class="card mt-4">
+    <div class="card-header">Units in {{ selected_faculty.faculty_name }}</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-bordered mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Unit</th>
+              <th>Active</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in selected_faculty.units.all %}
+            <tr>
+              <td>{{ u.unit_name }}</td>
+              <td>
+                {% if u.is_active %}
+                <span class="badge bg-success">Active</span>
+                {% else %}
+                <span class="badge bg-secondary">Inactive</span>
+                {% endif %}
+              </td>
+              <td>{{ u.created_at|date:"M d, Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3">No units for this faculty.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".progress-bar-dynamic").forEach(function (el) {
+      var w = el.getAttribute("data-width") || "0";
+      var num = String(w).replace(/[^0-9.\-]/g, "") || "0";
+      el.style.width = num + "%";
+      el.setAttribute("aria-valuenow", num);
+      el.textContent = num + "%";
+    });
+  });
+</script>
+{% endblock %}

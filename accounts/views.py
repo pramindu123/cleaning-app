@@ -18,6 +18,11 @@ def signup_view(request):
             user.save()
             login(request, user)
             messages.success(request, f'Account created successfully! Welcome, {user.username}!')
+            # Redirect user to the appropriate dashboard based on role
+            if getattr(user, 'role', None) == 'MANAGER':
+                return redirect('manager:dashboard')
+            if getattr(user, 'role', None) == 'DEAN_OFFICE':
+                return redirect('dean_office:dashboard')
             return redirect('dashboard')
         else:
             messages.error(request, 'Please correct the errors below.')
@@ -41,6 +46,11 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Welcome back, {user.username}!')
+                # After successful login, send user to role-specific dashboard
+                if getattr(user, 'role', None) == 'MANAGER':
+                    return redirect('manager:dashboard')
+                if getattr(user, 'role', None) == 'DEAN_OFFICE':
+                    return redirect('dean_office:dashboard')
                 return redirect('dashboard')
         else:
             messages.error(request, 'Invalid username or password.')
@@ -63,6 +73,9 @@ def dashboard_view(request):
     # Redirect managers to their dedicated dashboard
     if request.user.role == 'MANAGER':
         return redirect('manager:dashboard')
+    # Redirect dean office users to the dean_office app dashboard
+    if request.user.role == 'DEAN_OFFICE':
+        return redirect('dean_office:dashboard')
     
     # Redirect assistants to their dedicated dashboard
     if request.user.role == 'ASSISTANT':
