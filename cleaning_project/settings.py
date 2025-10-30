@@ -52,7 +52,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     # Auto-login middleware for development convenience (only when DEBUG=True)
-    'dean_office.middleware.AutoLoginMiddleware',
+    # Disabled: 'dean_office.middleware.AutoLoginMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

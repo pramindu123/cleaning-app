@@ -31,9 +31,6 @@ def signup_view(request):
 
 def login_view(request):
     """Handle user login"""
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-    
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
