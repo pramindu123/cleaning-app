@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.apps import apps
 import logging
+from datetime import datetime, date, timedelta
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -70,18 +72,6 @@ def _faculties_for_user(FacultyModel, user, request):
 
     return faculties_scoped, selected
 
-# Ordered list required by Dean Office UI
-ORDERED_FACULTY_NAMES = [
-    "Faculty of Humanities and Social Sciences",
-    "Faculty of Applied Sciences",
-    "Faculty of Management Studies and Commerce",
-    "Faculty of Medical Sciences",
-    "Faculty of Engineering",
-    "Faculty of Technology",
-    "Faculty of Allied Health Sciences",
-    "Faculty of Graduate Studies",
-]
-
 
 def _build_faculty_options(FacultyModel, faculties):
     """Return ordered option dicts for the filter dropdown.
@@ -91,7 +81,7 @@ def _build_faculty_options(FacultyModel, faculties):
       otherwise it's the label string so the name can still be resolved.
     """
     options = []
-    if not ORDERED_FACULTY_NAMES:
+    if not faculties:
         return options
     # build lookup by lower-cased name for quick matching
     lookup = {}
@@ -101,7 +91,8 @@ def _build_faculty_options(FacultyModel, faculties):
     except Exception:
         lookup = {}
 
-    for name in ORDERED_FACULTY_NAMES:
+    for f in faculties:
+        name = f.faculty_name.strip()
         key = name.strip().lower()
         faculty_obj = lookup.get(key)
         if faculty_obj:
@@ -124,24 +115,71 @@ def dashboard(request):
     selected_faculty = None
     # ensure kpis is always defined even if an exception occurs below
     kpis = {}
+    # Precompute safe defaults for month context so context build never fails
+    now_dt = timezone.localtime(timezone.now()) if hasattr(timezone, 'localtime') else datetime.now()
+    year = now_dt.year
+    month = now_dt.month
+    start_of_month = date(year, month, 1)
+    if month == 12:
+        end_of_month = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_of_month = date(year, month + 1, 1) - timedelta(days=1)
+    monthly_records = []
+    month_stats = {'total': 0, 'pending': 0, 'in_progress': 0, 'completed': 0, 'verified': 0}
+    show_faculty_filter = True  # Always initialize before try block
+
+    # Pre-scope for dean users: ensure their own faculty is selected and filter hidden
+    try:
+        user_role = getattr(request.user, 'role', None)
+        user_faculty = getattr(request.user, 'faculty', None)
+        is_privileged = bool(getattr(request.user, 'is_superuser', False) or getattr(request.user, 'is_staff', False))
+        if user_role == 'DEAN_OFFICE' and user_faculty and not is_privileged:
+            faculties = [user_faculty]
+            selected_faculty = user_faculty
+            show_faculty_filter = False
+    except Exception:
+        # If anything goes wrong here, fall back to later logic
+        pass
     try:
         Faculty = apps.get_model('cleaning', 'Faculty')
-        CleaningOperation = apps.get_model('cleaning', 'CleaningOperation')
-        # Defensive: only query if model is present
-        if CleaningOperation is not None:
-            cleaning_operations = CleaningOperation.objects.all()
+        CleaningRecord = apps.get_model('cleaning', 'CleaningRecord')
+
+        # Handle CleaningOperation separately so missing model doesn't block dashboard
+        try:
+            CleaningOperation = apps.get_model('cleaning', 'CleaningOperation')
+            if CleaningOperation is not None:
+                cleaning_operations = CleaningOperation.objects.all()
+        except LookupError:
+            logger.debug('cleaning.CleaningOperation model not found; skipping operations panel')
+            cleaning_operations = []
         # get faculties for filter (scoped by user role)
         if Faculty is not None:
-            faculties, selected_faculty = _faculties_for_user(Faculty, request.user, request)
-            if selected_faculty:
-                # filter cleaning operations by selected faculty if model has unit->faculty
-                cleaning_operations = cleaning_operations.filter(unit__faculty=selected_faculty)
+            # Only resolve via helper if we haven't already pre-scoped for dean
+            if not faculties:
+                faculties, selected_faculty = _faculties_for_user(Faculty, request.user, request)
+                show_faculty_filter = not (
+                    len(faculties) == 1
+                    and getattr(request.user, 'role', None) == 'DEAN_OFFICE'
+                    and not getattr(request.user, 'is_staff', False)
+                    and not getattr(request.user, 'is_superuser', False)
+                )
+            # Allow GET-based override only when filter is visible (i.e., privileged users)
+            if show_faculty_filter and (request.GET.get('faculty') or request.GET.get('faculty_id')):
+                selected_faculty_id = request.GET.get('faculty') or request.GET.get('faculty_id')
+                try:
+                    selected_faculty = Faculty.objects.get(pk=selected_faculty_id)
+                    if faculties and selected_faculty not in faculties:
+                        selected_faculty = None
+                except Faculty.DoesNotExist:
+                    selected_faculty = None
+        # Filter operations by selected faculty only when applicable and the object supports filtering
+        if selected_faculty and hasattr(cleaning_operations, 'filter'):
+            cleaning_operations = cleaning_operations.filter(unit__faculty=selected_faculty)
 
         # Build KPIs dynamically from cleaning models when available
         kpis = {}
         try:
             CleaningActivity = apps.get_model('cleaning', 'CleaningActivity')
-            CleaningRecord = apps.get_model('cleaning', 'CleaningRecord')
             # total activities (tasks) defined for units in the faculty (or overall)
             if CleaningActivity is not None:
                 if selected_faculty:
@@ -175,12 +213,56 @@ def dashboard(request):
             logger.debug('cleaning models not available to compute KPIs')
         except Exception:
             logger.exception('Error computing KPIs')
+
+        # Monthly cleaning details for selected faculty
+        selected_month_param = request.GET.get('month')  # expected format YYYY-MM
+        # Override defaults if a valid month param is present
+        try:
+            if selected_month_param:
+                y_str, m_str = selected_month_param.split('-')
+                year = int(y_str)
+                month = int(m_str)
+                start_of_month = date(year, month, 1)
+                if month == 12:
+                    end_of_month = date(year + 1, 1, 1) - timedelta(days=1)
+                else:
+                    end_of_month = date(year, month + 1, 1) - timedelta(days=1)
+        except Exception:
+            # keep defaults
+            pass
+        if CleaningRecord is not None and selected_faculty is not None:
+            # Pull monthly records for the selected faculty within the month range.
+            # Use scheduled_date for date filtering and include related FKs for efficiency.
+            mqs = CleaningRecord.objects.select_related('unit', 'activity', 'assigned_to')
+            mqs = mqs.filter(
+                unit__faculty=selected_faculty,
+                scheduled_date__gte=start_of_month,
+                scheduled_date__lte=end_of_month,
+            )
+            try:
+                logger.debug(
+                    "Dean dashboard monthly: faculty_id=%s range=%s..%s count=%s",
+                    getattr(selected_faculty, 'id', None), start_of_month, end_of_month, mqs.count()
+                )
+            except Exception:
+                pass
+            # Order by date then time
+            monthly_records = mqs.order_by('scheduled_date', 'scheduled_time')[:1000]
+            month_stats['total'] = mqs.count()
+            month_stats['pending'] = mqs.filter(status='PENDING').count()
+            month_stats['in_progress'] = mqs.filter(status='IN_PROGRESS').count()
+            month_stats['completed'] = mqs.filter(status='COMPLETED').count()
+            month_stats['verified'] = mqs.filter(status='VERIFIED').count()
+        # Note: We intentionally avoid overriding monthly_records here. It is already
+        # built from mqs above using scheduled_date and the selected_faculty scope.
     except LookupError:
-        # Model not available; log and continue with empty data
-        logger.debug('cleaning.CleaningOperation model not found; dashboard will show no operations')
+        # Some cleaning models not available; continue with whatever sections we built
+        logger.debug('One or more cleaning models not found; continuing with partial dashboard')
+        show_faculty_filter = True  # Ensure variable is always set
     except Exception as exc:
         # Catch unexpected errors to avoid crashing the site on import/checks
         logger.exception('Error fetching CleaningOperation objects: %s', exc)
+        show_faculty_filter = True  # Ensure variable is always set
 
     context = {
         'user': request.user,
@@ -188,11 +270,18 @@ def dashboard(request):
         'kpis': kpis,
         'faculties': faculties,
         'selected_faculty': selected_faculty,
+        'show_faculty_filter': show_faculty_filter,
         'faculty_options': _build_faculty_options(None, faculties),
         'selected_param': request.GET.get('faculty') or request.GET.get('faculty_id'),
+        'selected_month': f"{year:04d}-{month:02d}",
+        'selected_year': year,
+        'selected_month_num': month,
+        'monthly_records': monthly_records,
+        'month_stats': month_stats,
+        'month_range': {'start': start_of_month, 'end': end_of_month},
     }
 
-    return render(request, 'dean_office/dashboard.html', context)
+    return render(request, 'dean_office/dashboard_new_fixed.html', context)
 
 
 @login_required

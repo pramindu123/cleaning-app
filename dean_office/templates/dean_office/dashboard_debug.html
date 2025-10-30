@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Dean Dashboard Debug</h1>
+    
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>Context Debug:</h5>
+            <ul>
+                <li>show_faculty_filter: <strong>{{ show_faculty_filter }}</strong></li>
+                <li>faculties length: <strong>{{ faculties|length }}</strong></li>
+                <li>selected_faculty: <strong>{{ selected_faculty }}</strong></li>
+                <li>faculty_options length: <strong>{{ faculty_options|length }}</strong></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>Faculties List:</h5>
+            <ul>
+            {% for faculty in faculties %}
+                <li>ID: {{ faculty.id }}, Name: {{ faculty.faculty_name }}</li>
+            {% empty %}
+                <li class="text-danger">No faculties in list!</li>
+            {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>Faculty Options:</h5>
+            <ul>
+            {% for opt in faculty_options %}
+                <li>Value: {{ opt.value }}, Label: {{ opt.label }}</li>
+            {% empty %}
+                <li class="text-danger">No faculty options!</li>
+            {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>Actual Faculty Filter Include:</h5>
+            {% include 'dean_office/_faculty_filter.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}

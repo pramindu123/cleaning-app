@@ -1,0 +1,6 @@
+        # get faculties for filter (scoped by user role)
+        if Faculty is not None:
+            faculties, selected_faculty = _faculties_for_user(Faculty, request.user, request)
+            logger.debug(f"After _faculties_for_user: faculties={faculties}, selected_faculty={selected_faculty}")
+            show_faculty_filter = not (len(faculties) == 1 and getattr(request.user, 'role', None) == 'DEAN_OFFICE' and not getattr(request.user, 'is_staff', False) and not getattr(request.user, 'is_superuser', False))
+            logger.debug(f"show_faculty_filter={show_faculty_filter}")

@@ -1,0 +1,24 @@
+        if CleaningOperation is not None:
+            cleaning_operations = CleaningOperation.objects.all()
+        # get faculties for filter (scoped by user role)
+        if Faculty is not None:
+            faculties, selected_faculty = _faculties_for_user(Faculty, request.user, request)
+            print(f"DEBUG: After _faculties_for_user: faculties={faculties}, selected_faculty={selected_faculty}")
+            print(f"DEBUG: request.user.role={request.user.role}, request.user.faculty={request.user.faculty}")
+            show_faculty_filter = not (len(faculties) == 1 and getattr(request.user, 'role', None) == 'DEAN_OFFICE' and not getattr(request.user, 'is_staff', False) and not getattr(request.user, 'is_superuser', False))
+            print(f"DEBUG: show_faculty_filter={show_faculty_filter}")
+            if request.GET.get('faculty') or request.GET.get('faculty_id'):
+                selected_faculty_id = request.GET.get('faculty') or request.GET.get('faculty_id')
+                print(f"DEBUG: Faculty param in GET: {selected_faculty_id}")
+                try:
+                    selected_faculty = Faculty.objects.get(pk=selected_faculty_id)
+                    if selected_faculty not in faculties:
+                        print(f"DEBUG: Selected faculty {selected_faculty} not in faculties list, setting to None")
+                        selected_faculty = None
+                except Faculty.DoesNotExist:
+                    print(f"DEBUG: Faculty {selected_faculty_id} does not exist")
+                    selected_faculty = None
+            else:
+                print(f"DEBUG: No faculty param in GET, selected_faculty={selected_faculty}")
+        print(f"DEBUG: Final selected_faculty={selected_faculty}")
+        cleaning_operations = cleaning_operations.filter(unit__faculty=selected_faculty)

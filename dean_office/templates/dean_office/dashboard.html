@@ -3,10 +3,19 @@ Office Dashboard{% endblock %} {% block content %}
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h3 mb-0">Dean Office Dashboard</h1>
-    <div>
-      <a href="{% url 'dean_office:reports' %}" class="btn btn-primary"
-        >Reports</a
-      >
+    <div class="d-flex align-items-center gap-2">
+      <form method="get" class="d-flex align-items-center me-2">
+        {# Preserve faculty selection in query when changing month #}
+        {% if selected_faculty %}
+          <input type="hidden" name="faculty_id" value="{{ selected_faculty.id }}" />
+        {% elif selected_param %}
+          <input type="hidden" name="faculty" value="{{ selected_param }}" />
+        {% endif %}
+        <label for="month" class="me-2 mb-0 small text-muted">Month</label>
+        <input type="month" id="month" name="month" class="form-control form-control-sm" value="{{ selected_month }}" />
+        <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Apply</button>
+      </form>
+      <a href="{% url 'dean_office:reports' %}" class="btn btn-primary">Reports</a>
     </div>
   </div>
 
@@ -64,6 +73,61 @@ Office Dashboard{% endblock %} {% block content %}
 
     <div class="col-md-6">
       <div class="row g-3">
+        <div class="col-12">
+          <div class="card shadow">
+            <div class="card-header bg-success text-white">
+              Monthly Cleaning Details {% if month_range %}<span class="badge bg-light text-dark ms-2">{{ month_range.start|date:'M Y' }}</span>{% endif %}
+            </div>
+            <div class="card-body p-0">
+              {% if selected_faculty %}
+                <div class="p-3 border-bottom small text-muted">
+                  Showing records for <strong>{{ selected_faculty.faculty_name }}</strong> between {{ month_range.start }} and {{ month_range.end }}
+                  <div class="mt-2">
+                    <span class="badge bg-secondary me-1">Total: {{ month_stats.total }}</span>
+                    <span class="badge bg-warning text-dark me-1">Pending: {{ month_stats.pending }}</span>
+                    <span class="badge bg-info text-dark me-1">In Progress: {{ month_stats.in_progress }}</span>
+                    <span class="badge bg-success me-1">Completed: {{ month_stats.completed }}</span>
+                    <span class="badge bg-primary">Verified: {{ month_stats.verified }}</span>
+                  </div>
+                </div>
+                {% if monthly_records %}
+                  <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle">
+                      <thead>
+                        <tr>
+                          <th>Unit</th>
+                          <th>Activity</th>
+                          <th>Scheduled</th>
+                          <th>Marked</th>
+                          <th>Assistant</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for r in monthly_records %}
+                        <tr>
+                          <td>{{ r.unit.unit_name }}</td>
+                          <td>{% if r.activity %}{{ r.activity.activity_name }}{% else %}<span class="text-muted">General</span>{% endif %}</td>
+                          <td>{{ r.scheduled_date|date:'Y-m-d' }}{% if r.scheduled_time %} {{ r.scheduled_time|time:'H:i' }}{% endif %}</td>
+                          <td>{% if r.completed_date %}{{ r.completed_date|date:'Y-m-d' }} {{ r.completed_date|time:'H:i' }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                          <td>{% if r.assigned_to %}{{ r.assigned_to.get_full_name|default:r.assigned_to.username }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                          <td>
+                            <span class="badge bg-{% if r.status == 'VERIFIED' %}primary{% elif r.status == 'COMPLETED' %}success{% elif r.status == 'IN_PROGRESS' %}info text-dark{% elif r.status == 'PENDING' %}warning text-dark{% else %}secondary{% endif %}">{{ r.get_status_display }}</span>
+                          </td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                {% else %}
+                  <div class="p-3 text-muted">No records for selected month.</div>
+                {% endif %}
+              {% else %}
+                <div class="p-3 text-muted">Select a faculty to view monthly details.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
         <div class="col-12">
           <div class="card shadow">
             <div class="card-header bg-info text-white">

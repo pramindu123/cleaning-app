@@ -1062,9 +1062,12 @@ def activity_performance_report(request):
 
 @login_required
 def faculty_cleaning_report(request, faculty_id):
-    """Display cleaning details for all units associated with a faculty"""
-    if not request.user.is_manager():
-        messages.error(request, 'Only managers can view faculty reports.')
+    """Display cleaning details for all units associated with a faculty.
+
+    Allow both Managers and Dean Office users to view this read-only report.
+    """
+    if not (getattr(request.user, 'is_manager', lambda: False)() or getattr(request.user, 'is_dean_office', lambda: False)()):
+        messages.error(request, 'Only managers or dean office can view faculty reports.')
         return redirect('cleaning:cleaning_record_list')
     
     faculty = get_object_or_404(Faculty, pk=faculty_id)
@@ -1154,9 +1157,12 @@ def faculty_cleaning_report(request, faculty_id):
 
 @login_required
 def faculty_list_report(request):
-    """List all faculties for cleaning report access"""
-    if not request.user.is_manager():
-        messages.error(request, 'Only managers can view faculty reports.')
+    """List all faculties for cleaning report access.
+
+    Allow both Managers and Dean Office users to access.
+    """
+    if not (getattr(request.user, 'is_manager', lambda: False)() or getattr(request.user, 'is_dean_office', lambda: False)()):
+        messages.error(request, 'Only managers or dean office can view faculty reports.')
         return redirect('cleaning:cleaning_record_list')
     
     faculties = Faculty.objects.all().order_by('faculty_name')

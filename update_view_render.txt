@@ -1,0 +1,16 @@
+    context = {
+        'user': request.user,
+        'cleaning_operations': cleaning_operations,
+        'kpis': kpis,
+        'faculties': faculties,
+        'selected_faculty': selected_faculty,
+        'show_faculty_filter': show_faculty_filter,
+        'faculty_options': _build_faculty_options(None, faculties),
+        'selected_param': request.GET.get('faculty') or request.GET.get('faculty_id'),
+        'selected_month': f"{year:04d}-{month:02d}",
+        'monthly_records': monthly_records,
+        'month_stats': month_stats,
+        'month_range': {'start': start_of_month, 'end': end_of_month},
+    }
+
+    return render(request, 'dean_office/dashboard_new_fixed.html', context)

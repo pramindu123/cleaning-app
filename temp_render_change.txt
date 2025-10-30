@@ -1,0 +1,1 @@
+    return render(request, 'dean_office/dashboard_debug.html', context)

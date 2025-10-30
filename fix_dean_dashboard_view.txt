@@ -1,0 +1,35 @@
+@login_required
+def dashboard(request):
+    """Render the Dean Office dashboard."""
+    
+    # Initialize all context variables with safe defaults
+    cleaning_operations = []
+    faculties = []
+    selected_faculty = None
+    kpis = {}
+    show_faculty_filter = True
+    
+    # Get current month for defaults
+    now_dt = timezone.localtime(timezone.now()) if hasattr(timezone, 'localtime') else datetime.now()
+    year = now_dt.year
+    month = now_dt.month
+    start_of_month = date(year, month, 1)
+    if month == 12:
+        end_of_month = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_of_month = date(year, month + 1, 1) - timedelta(days=1)
+    monthly_records = []
+    month_stats = {'total': 0, 'pending': 0, 'in_progress': 0, 'completed': 0, 'verified': 0}
+    
+    # FOR DEAN USERS: Set faculty directly from user object FIRST
+    if request.user.role == 'DEAN_OFFICE' and request.user.faculty:
+        faculties = [request.user.faculty]
+        selected_faculty = request.user.faculty  
+        show_faculty_filter = False
+    
+    try:
+        Faculty = apps.get_model('cleaning', 'Faculty')
+        CleaningOperation = apps.get_model('cleaning', 'CleaningOperation')
+        CleaningRecord = apps.get_model('cleaning', 'CleaningRecord')
+        
+        # ... rest of the code ...

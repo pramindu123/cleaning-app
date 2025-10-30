@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dean Office Dashboard - USJ Cleaning App{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Override base.html gradient background for cleaner dean-style look */
+  body {
+    background: #f8f9fa !important;
+    min-height: 100vh;
+  }
+  
+  /* Align dean dashboard styling to assistant dashboard look */
+  .unit-badge { background:#0d6efd; color:#fff; padding:5px 12px; border-radius:20px; font-size:.85rem; display:inline-block; margin:4px; }
+  .badge-status { padding:.35rem .6rem; border-radius:10rem; font-size:.75rem; font-weight:600; text-transform:uppercase; }
+  .badge-pending { background-color:#fff3cd; color:#856404; }
+  .badge-in-progress { background-color:#cff4fc; color:#055160; }
+  .badge-completed { background-color:#d1e7dd; color:#0f5132; }
+  .badge-verified { background-color:#cfe2ff; color:#084298; }
+  .empty-state { text-align:center; padding:30px; color:#6c757d; }
+  .empty-state i { font-size:3rem; opacity:.3; margin-bottom:15px; }
+  
+  /* Month stats badges */
+  .stats-badge { display: inline-block; padding: .5rem 1rem; margin: .25rem; border-radius: .5rem; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header (match assistant style) -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h3 mb-0">Dean Office Dashboard</h1>
+      <div class="d-flex align-items-center gap-2">
+        {% include 'dean_office/_faculty_filter.html' %}
+        <form method="get" class="d-flex align-items-center me-2">
+          {# Preserve faculty selection in query when changing month #}
+          {% if selected_faculty %}
+            <input type="hidden" name="faculty_id" value="{{ selected_faculty.id }}" />
+          {% elif selected_param %}
+            <input type="hidden" name="faculty" value="{{ selected_param }}" />
+          {% endif %}
+          <label for="month" class="me-2 mb-0 small text-muted">Month</label>
+          <input type="month" id="month" name="month" class="form-control form-control-sm" value="{{ selected_month }}" style="width: 160px;" />
+          <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Apply</button>
+        </form>
+        <a href="{% url 'dean_office:reports' %}" class="btn btn-primary btn-sm">Reports</a>
+        <a href="{% url 'logout' %}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to logout?');">
+          <i class="fas fa-sign-out-alt me-1"></i>Logout
+        </a>
+      </div>
+    </div>
+    
+    <p class="text-muted mb-3">
+      <i class="fas fa-user-tag me-2"></i>{{ user.get_role_display }}
+      <span class="ms-3"><i class="far fa-calendar me-2"></i>{% now "l, F d, Y" %}</span>
+      {% if selected_faculty %}
+        <span class="ms-3"><i class="fas fa-building me-2"></i><strong>{{ selected_faculty.faculty_name }}</strong></span>
+      {% endif %}
+    </p>
+
+    <!-- Monthly Cleaning Details -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-calendar-check me-2"></i>Monthly Cleaning Details
+                    {% if month_range %}<span class="badge bg-light text-dark ms-2">{{ month_range.start|date:'M Y' }}</span>{% endif %}
+                </div>
+                <div class="card-body">
+                {% if selected_faculty %}
+                    <div class="mb-3">
+                        <span class="stats-badge bg-secondary text-white">Total: {{ month_stats.total }}</span>
+                        <span class="stats-badge bg-warning text-dark">Pending: {{ month_stats.pending }}</span>
+                        <span class="stats-badge bg-info text-dark">In Progress: {{ month_stats.in_progress }}</span>
+                        <span class="stats-badge bg-success text-white">Completed: {{ month_stats.completed }}</span>
+                        <span class="stats-badge bg-primary text-white">Verified: {{ month_stats.verified }}</span>
+                    </div>
+                    
+                    {% if monthly_records %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 18%">Unit</th>
+                                        <th style="width: 22%">Activity</th>
+                                        <th style="width: 13%">Scheduled Date</th>
+                                        <th style="width: 13%">Marked Date</th>
+                                        <th style="width: 15%">Assistant</th>
+                                        <th style="width: 10%">Status</th>
+                                        <th style="width: 9%" class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in monthly_records %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ record.unit.unit_name }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if record.activity %}
+                                                {{ record.activity.activity_name }}
+                                            {% else %}
+                                                <span class="text-muted">General Cleaning</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ record.scheduled_date|date:"M d, Y" }}<br>
+                                            {% if record.scheduled_time %}
+                                                <small class="text-muted">{{ record.scheduled_time|time:"g:i A" }}</small>
+                                            {% else %}
+                                                <small class="text-muted">--</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.completed_date %}
+                                                {{ record.completed_date|date:"M d, Y" }}<br>
+                                                <small class="text-muted">{{ record.completed_date|time:"g:i A" }}</small>
+                                            {% else %}
+                                                <span class="text-muted">--</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.assigned_to %}
+                                                {{ record.assigned_to.get_full_name|default:record.assigned_to.username }}
+                                            {% else %}
+                                                <span class="text-muted">--</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge-status badge-{{ record.status|lower }}">
+                                                {{ record.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{% url 'cleaning:cleaning_record_detail' record.pk %}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center text-muted small">
+                            Showing {{ monthly_records|length }} of {{ month_stats.total }} records for {{ month_range.start }} to {{ month_range.end }}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-times"></i>
+                            <p>No cleaning records for the selected month</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-building"></i>
+                        <p>Please select a faculty to view monthly cleaning details</p>
+                    </div>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Performance Indicators -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-chart-line me-2"></i>Key Performance Indicators
+                </div>
+                <div class="card-body">
+                    {% if kpis %}
+                        <div class="row g-2">
+                            {% for key, value in kpis.items %}
+                            <div class="col-sm-6">
+                                <div class="border rounded p-3 h-100 text-center">
+                                    <div class="small text-muted mb-1">{{ key }}</div>
+                                    <div class="h4 mb-0 text-primary">{{ value }}</div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-chart-bar"></i>
+                            <p>No KPIs available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Cleaning Operations -->
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <i class="fas fa-tasks me-2"></i>Current Cleaning Operations
+                </div>
+                <div class="card-body">
+                    {% if cleaning_operations %}
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Location</th>
+                                        <th>Status</th>
+                                        <th>Assigned</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for op in cleaning_operations %}
+                                    <tr>
+                                        <td>{{ op.location|default:'—' }}</td>
+                                        <td>
+                                            {% if op.status %}
+                                                <span class="badge bg-{{ op.status|lower|default:'secondary' }}">{{ op.status }}</span>
+                                            {% else %}
+                                                <span class="text-muted">Unknown</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ op.assigned_to|default:'—' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-list"></i>
+                            <p>No current cleaning operations</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

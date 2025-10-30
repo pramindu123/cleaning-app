@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Debug Dean Dashboard</h1>
+    
+    <h3>Context Variables:</h3>
+    <ul>
+        <li>show_faculty_filter: {{ show_faculty_filter }}</li>
+        <li>faculties count: {{ faculties|length }}</li>
+        <li>selected_faculty: {{ selected_faculty }}</li>
+        <li>selected_faculty.faculty_name: {{ selected_faculty.faculty_name }}</li>
+        <li>faculty_options count: {{ faculty_options|length }}</li>
+    </ul>
+    
+    <h3>Faculties:</h3>
+    <ul>
+    {% for faculty in faculties %}
+        <li>{{ faculty.id }} - {{ faculty.faculty_name }}</li>
+    {% empty %}
+        <li>No faculties found</li>
+    {% endfor %}
+    </ul>
+    
+    <h3>Faculty Options:</h3>
+    <ul>
+    {% for opt in faculty_options %}
+        <li>{{ opt.value }} - {{ opt.label }}</li>
+    {% empty %}
+        <li>No faculty options found</li>
+    {% endfor %}
+    </ul>
+</div>
+{% endblock %}
