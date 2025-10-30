@@ -64,7 +64,7 @@
                             </div>
                             <div class="col-md-6">
                                 {% if record.completed_date %}
-                                <p><strong>Completed On:</strong> {{ record.completed_date|date:"Y-m-d H:i" }}</p>
+                                <p><strong>Marked On:</strong> {{ record.completed_date|date:"Y-m-d H:i" }}</p>
                                 {% endif %}
                                 {% if record.verified_by %}
                                 <p><strong>Verified By:</strong> {{ record.verified_by.get_full_name|default:record.verified_by.username }}</p>
