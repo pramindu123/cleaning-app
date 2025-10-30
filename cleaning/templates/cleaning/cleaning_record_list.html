@@ -75,7 +75,7 @@
                             <th>Assigned To</th>
                             {% endif %}
                             <th>Scheduled Date</th>
-                            
+                            <th>Marked Date</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -90,7 +90,7 @@
                             <td>{{ record.assigned_to.get_full_name|default:record.assigned_to.username }}</td>
                             {% endif %}
                             <td>{{ record.scheduled_date }}</td>
-                            
+                            <td>{% if record.completed_date %}{{ record.completed_date }}{% else %}-{% endif %}</td>
                             <td>
                                 {% if record.status == 'PENDING' %}
                                 <span class="badge bg-warning text-dark">{{ record.get_status_display }}</span>
@@ -113,9 +113,7 @@
                                 {% if user.is_assistant and record.assigned_to == user and record.status in 'PENDING,IN_PROGRESS' %}
                                 <a href="{% url 'cleaning:cleaning_record_complete' record.pk %}" class="btn btn-sm btn-success">Complete</a>
                                 {% endif %}
-                                {% if user.is_manager and record.can_be_verified %}
-                                <a href="{% url 'cleaning:cleaning_record_verify' record.pk %}" class="btn btn-sm btn-primary">Verify</a>
-                                {% endif %}
+                                {# Removed verify button for managers #}
                             </td>
                         </tr>
                         {% endfor %}

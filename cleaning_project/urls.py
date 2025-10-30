@@ -22,6 +22,10 @@ urlpatterns = [
     path('', include('accounts.urls')),
     path('cleaning/', include('cleaning.urls')),
     path('manager/', include('manager.urls')),
+    # Assistant dashboard and related routes
+    path('assistant/', include('assistant.urls')),
+    # Dean Office routes for dean users
+    path('dean/', include('dean_office.urls')),
 ]
 
 

@@ -17,6 +17,19 @@ from .forms import (
     CleaningActivityForm
 )
 
+# Helper: build a timezone-aware datetime from a date and optional time
+def _combine_aware(dt_date, dt_time=None):
+    """Return a timezone-aware datetime for the given date and time.
+
+    If dt_time is None, default to 12:00 local time.
+    """
+    if dt_time is None:
+        dt_time = dtime(12, 0)
+    naive = datetime.combine(dt_date, dt_time)
+    if timezone.is_naive(naive):
+        return timezone.make_aware(naive, timezone.get_current_timezone())
+    return naive
+
 @login_required
 def cleaning_record_list(request):
     """List all cleaning records with filtering"""
@@ -85,7 +98,7 @@ def cleaning_record_create(request):
                 unit = form.cleaned_data['unit']
                 activity = form.cleaned_data.get('activity')
                 assigned_to = form.cleaned_data['assigned_to']
-                status = 'PENDING'  # Default status for new records
+                status = 'COMPLETED'  # Mark calendar-selected records as completed
                 notes = form.cleaned_data.get('notes', '')
 
                 # If assistant is creating, force assign to themselves
@@ -172,7 +185,6 @@ def cleaning_record_create(request):
                         if activity.frequency == 'TWICE_DAILY':
                             existing_for_day = list(CleaningRecord.objects.filter(activity=activity, scheduled_date=sd).order_by('id'))
                             missing = max(0, 2 - len(existing_for_day))
-                            # Optional time slots to differentiate records
                             slots = [dtime(9, 0), dtime(15, 0)]
                             used_times = {r.scheduled_time for r in existing_for_day if r.scheduled_time}
                             for _ in range(missing):
@@ -184,14 +196,14 @@ def cleaning_record_create(request):
                                     status=status,
                                     notes=notes,
                                 )
-                                # assign an unused slot if available
                                 for t in slots:
                                     if t not in used_times:
                                         rec.scheduled_time = t
                                         used_times.add(t)
                                         break
-                                if status in ['COMPLETED', 'VERIFIED']:
-                                    rec.completed_date = timezone.now()
+                                # Completed datetime equals marked date with the slot time
+                                # Marked date/time is the actual time of marking
+                                rec.completed_date = timezone.now()
                                 rec.save()
                                 created_records.append(rec)
                         else:
@@ -203,8 +215,8 @@ def cleaning_record_create(request):
                                 status=status,
                                 notes=notes,
                             )
-                            if status in ['COMPLETED', 'VERIFIED']:
-                                rec.completed_date = timezone.now()
+                            # Marked date/time is the actual time of marking
+                            rec.completed_date = timezone.now()
                             rec.save()
                             created_records.append(rec)
 
@@ -229,17 +241,13 @@ def cleaning_record_create(request):
                     messages.error(request, f'Error creating cleaning record: {str(e)}')
     else:
         form = CleaningRecordForm(initial=initial)
-        
-        # If assistant, make assigned_to field read-only and hidden
-        if request.user.is_assistant():
-            form.fields['assigned_to'].disabled = True
-            form.fields['assigned_to'].initial = request.user
-            form.fields['assigned_to'].widget.attrs['style'] = 'display:none;'
+        # Always show assistant selection field, even for assistants
+        # Remove disabling/hiding logic so field is always visible
     
     context = {
         'form': form,
         'action': 'Create',
-        'is_assistant': request.user.is_assistant(),
+        'is_assistant': False,  # Always show assistant selection field
     }
     return render(request, 'cleaning/cleaning_record_form.html', context)
 
@@ -280,18 +288,13 @@ def cleaning_record_update(request, pk):
                 messages.error(request, f'Error updating cleaning record: {str(e)}')
     else:
         form = CleaningRecordForm(instance=record)
-        
-        # If assistant, make assigned_to field read-only and hidden
-        if request.user.is_assistant():
-            form.fields['assigned_to'].disabled = True
-            form.fields['assigned_to'].initial = request.user
-            form.fields['assigned_to'].widget.attrs['style'] = 'display:none;'
+        # Always show assistant selection field, even for assistants
     
     context = {
         'form': form,
         'record': record,
         'action': 'Update',
-        'is_assistant': request.user.is_assistant(),
+        'is_assistant': False,  # Always show assistant selection field
     }
     return render(request, 'cleaning/cleaning_record_form.html', context)
 
@@ -319,28 +322,27 @@ def cleaning_record_detail(request, pk):
 def cleaning_record_complete(request, pk):
     """Mark a cleaning record as completed (Assistant only)"""
     record = get_object_or_404(CleaningRecord, pk=pk)
-    
+
     # Check if user is the assigned assistant
     if record.assigned_to != request.user:
         messages.error(request, 'You can only complete your own cleaning tasks.')
         return redirect('cleaning:cleaning_record_detail', pk=pk)
-    
+
     if record.status not in ['PENDING', 'IN_PROGRESS']:
         messages.error(request, 'This cleaning record cannot be marked as completed.')
         return redirect('cleaning:cleaning_record_detail', pk=pk)
-    
-    if request.method == 'POST':
-        form = CleaningCompletionForm(request.POST, instance=record)
-        if form.is_valid():
-            record = form.save(commit=False)
-            record.status = 'COMPLETED'
-            record.completed_date = timezone.now()
-            record.save()
-            messages.success(request, 'Cleaning task marked as completed.')
-            return redirect('cleaning:cleaning_record_detail', pk=record.pk)
-    else:
-        form = CleaningCompletionForm(instance=record)
-    
+
+    # Directly mark as completed on first GET (no form needed)
+    if request.method == 'GET':
+        record.status = 'COMPLETED'
+        # Marked date/time is the actual time of marking
+        record.completed_date = timezone.now()
+        record.save()
+        messages.success(request, 'Cleaning task marked as completed.')
+        return redirect('cleaning:cleaning_record_detail', pk=record.pk)
+
+    # Fallback to form for POST (legacy/manual notes)
+    form = CleaningCompletionForm(instance=record)
     context = {
         'form': form,
         'record': record,
@@ -965,6 +967,7 @@ def mark_activity_completed_day(request, pk):
                 record.assigned_to = assigned_to
 
         record.status = 'COMPLETED'
+        # Marked date/time is the actual time of marking
         record.completed_date = timezone.now()
         record.save()
         return JsonResponse({'ok': True, 'record_id': record.id, 'status': record.status})
@@ -983,6 +986,7 @@ def mark_activity_completed_day(request, pk):
             record.assigned_to = assigned_to
 
     record.status = 'COMPLETED'
+    # Marked date/time is the actual time of marking
     record.completed_date = timezone.now()
     record.save()
     return JsonResponse({'ok': True, 'record_id': record.id, 'status': record.status})

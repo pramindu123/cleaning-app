@@ -36,9 +36,11 @@
           {% if d.records %}
           <div class="mt-1 small">
             {% for r in d.records %}
-              <div>
-                <span class="badge {% if r.status == 'VERIFIED' %}bg-primary{% elif r.status == 'COMPLETED' %}bg-success{% elif r.status == 'IN_PROGRESS' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ r.status }}</span>
-              </div>
+              {% if r.status == 'COMPLETED' or r.status == 'VERIFIED' %}
+                <div>
+                  <span class="badge {% if r.status == 'VERIFIED' %}bg-primary{% else %}bg-success{% endif %}">{{ r.status }}</span>
+                </div>
+              {% endif %}
             {% endfor %}
           </div>
           {% endif %}

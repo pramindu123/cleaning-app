@@ -40,6 +40,9 @@ INSTALLED_APPS = [
     'accounts',
     'cleaning',
     'manager',
+    'assistant',
+    # Dean Office app provides dean-facing dashboards and reports
+    'dean_office',
 ]
 
 MIDDLEWARE = [
@@ -111,7 +114,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Use your local time zone so displayed times match your actual marking time
+TIME_ZONE = 'Asia/Colombo'
 
 USE_I18N = True
 

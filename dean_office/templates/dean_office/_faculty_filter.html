@@ -3,7 +3,9 @@
     <div class="col-auto">
       <label for="faculty" class="form-label">Filter by Faculty</label>
       <select id="faculty" name="faculty" class="form-select" onchange="this.form.submit()">
+        {% if faculties and faculties|length > 1 %}
         <option value="">All Faculties</option>
+        {% endif %}
         {# Build options from the ordered options provided by the view. #}
         {% for opt in faculty_options %}
           <option value="{{ opt.value }}" 

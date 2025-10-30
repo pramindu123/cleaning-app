@@ -33,6 +33,43 @@ def _resolve_selected_faculty(FacultyModel, request):
             return None
 
 
+def _faculties_for_user(FacultyModel, user, request):
+    """Return (faculties_list, selected_faculty) scoped for the current user.
+
+    - Dean Office users with an associated faculty only see their faculty by default
+      and cannot switch to others unless they are staff/superuser.
+    - Managers/staff can see all faculties and may filter via GET params.
+    - If FacultyModel is missing, returns ([], None).
+    """
+    if FacultyModel is None:
+        return [], None
+
+    try:
+        all_faculties = list(FacultyModel.objects.all().order_by('faculty_name'))
+    except Exception:
+        return [], None
+
+    selected = _resolve_selected_faculty(FacultyModel, request)
+
+    # Restrict dean office users (non-staff) to their own faculty
+    try:
+        user_role = getattr(user, 'role', None)
+        user_faculty = getattr(user, 'faculty', None)
+        is_privileged = bool(getattr(user, 'is_superuser', False) or getattr(user, 'is_staff', False))
+    except Exception:
+        user_role = None
+        user_faculty = None
+        is_privileged = False
+
+    if user_role == 'DEAN_OFFICE' and user_faculty and not is_privileged:
+        faculties_scoped = [user_faculty]
+        # Force selected to user's faculty, ignore mismatched GET params
+        selected = user_faculty
+    else:
+        faculties_scoped = all_faculties
+
+    return faculties_scoped, selected
+
 # Ordered list required by Dean Office UI
 ORDERED_FACULTY_NAMES = [
     "Faculty of Humanities and Social Sciences",
@@ -93,10 +130,9 @@ def dashboard(request):
         # Defensive: only query if model is present
         if CleaningOperation is not None:
             cleaning_operations = CleaningOperation.objects.all()
-        # get faculties for filter
+        # get faculties for filter (scoped by user role)
         if Faculty is not None:
-            faculties = list(Faculty.objects.all().order_by('faculty_name'))
-            selected_faculty = _resolve_selected_faculty(Faculty, request)
+            faculties, selected_faculty = _faculties_for_user(Faculty, request.user, request)
             if selected_faculty:
                 # filter cleaning operations by selected faculty if model has unit->faculty
                 cleaning_operations = cleaning_operations.filter(unit__faculty=selected_faculty)
@@ -173,8 +209,7 @@ def reports(request):
         Faculty = apps.get_model('cleaning', 'Faculty')
         CleaningRecord = apps.get_model('cleaning', 'CleaningRecord')
         if Faculty is not None:
-            faculties = list(Faculty.objects.all().order_by('faculty_name'))
-            selected_faculty = _resolve_selected_faculty(Faculty, request)
+            faculties, selected_faculty = _faculties_for_user(Faculty, request.user, request)
         if CleaningRecord is not None:
             qs = CleaningRecord.objects.select_related('unit', 'activity')
             if selected_faculty:
@@ -206,8 +241,7 @@ def kpis(request):
         Faculty = apps.get_model('cleaning', 'Faculty')
         Unit = apps.get_model('cleaning', 'Unit')
         if Faculty is not None:
-            faculties = list(Faculty.objects.all().order_by('faculty_name'))
-            selected_faculty = _resolve_selected_faculty(Faculty, request)
+            faculties, selected_faculty = _faculties_for_user(Faculty, request.user, request)
 
             targets = [selected_faculty] if selected_faculty else faculties
             for f in targets:
@@ -247,8 +281,7 @@ def monitoring(request):
         Faculty = apps.get_model('cleaning', 'Faculty')
         Unit = apps.get_model('cleaning', 'Unit')
         if Faculty is not None:
-            faculties = list(Faculty.objects.all().order_by('faculty_name'))
-            selected_faculty = _resolve_selected_faculty(Faculty, request)
+            faculties, selected_faculty = _faculties_for_user(Faculty, request.user, request)
 
             if selected_faculty:
                 units = Unit.objects.filter(faculty=selected_faculty).order_by('-created_at')[:200]
@@ -281,8 +314,7 @@ def templates_view(request):
         Faculty = apps.get_model('cleaning', 'Faculty')
         Unit = apps.get_model('cleaning', 'Unit')
         if Faculty is not None:
-            faculties = list(Faculty.objects.all().order_by('faculty_name'))
-            selected_faculty = _resolve_selected_faculty(Faculty, request)
+            faculties, selected_faculty = _faculties_for_user(Faculty, request.user, request)
 
             targets = [selected_faculty] if selected_faculty else faculties
             for f in targets:
